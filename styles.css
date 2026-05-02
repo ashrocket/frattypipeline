@@ -1,0 +1,573 @@
+/* FRATTY PIPELINE - 90s Aesthetic CSS */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 10px;
+  background: linear-gradient(180deg, #FF69B4 0%, #87CEEB 50%, #98FB98 100%);
+  font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ========================================
+   TITLE SECTION - 90s Style!
+   ======================================== */
+
+.title-container {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.game-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #FFD700;
+  text-shadow:
+    3px 3px 0 #FF1493,
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+  margin: 0;
+  letter-spacing: 2px;
+  animation: titlePulse 2s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.tagline {
+  font-size: 14px;
+  color: #000;
+  margin: 5px 0 0 0;
+  font-style: italic;
+  text-shadow: 1px 1px 0 #fff;
+}
+
+/* ========================================
+   GAME CONTAINER
+   ======================================== */
+
+#game-wrapper {
+  position: relative;
+  width: 288px;
+  max-width: 100%;
+}
+
+#game {
+  width: 288px;
+  height: 480px;
+  border: 4px solid #000;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 2px #FFD700,
+    0 0 0 6px #FF1493,
+    0 8px 20px rgba(0,0,0,0.4);
+  overflow: hidden;
+  background: #87CEEB;
+
+  /* Pixel-perfect rendering */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+#game canvas {
+  image-rendering: pixelated !important;
+  image-rendering: -moz-crisp-edges !important;
+  image-rendering: crisp-edges !important;
+}
+
+/* Transformation Warning Overlay */
+#transform-warning {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: dangerFlash 0.5s ease-in-out infinite;
+}
+
+#transform-warning.hidden {
+  display: none;
+}
+
+@keyframes dangerFlash {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+.warning-text {
+  color: #FF0000;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 2px 2px 0 #000;
+  animation: warningShake 0.1s ease-in-out infinite;
+}
+
+@keyframes warningShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+/* ========================================
+   INSTRUCTIONS (Desktop)
+   ======================================== */
+
+.instructions {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 10px 0;
+  padding: 8px 15px;
+  background: rgba(0,0,0,0.7);
+  border-radius: 20px;
+  max-width: 288px;
+}
+
+.key-hint {
+  font-size: 11px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.key {
+  display: inline-block;
+  background: #FFD700;
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 10px;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+}
+
+/* ========================================
+   MOBILE CONTROLS
+   ======================================== */
+
+.mobile-controls {
+  display: none;
+  width: 288px;
+  margin: 10px 0;
+  padding: 10px;
+  background: linear-gradient(180deg, #FF69B4, #FF1493);
+  border-radius: 10px;
+  border: 3px solid #000;
+  box-shadow: 0 4px 0 #000;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mobile-btn {
+  background: linear-gradient(180deg, #FFD700, #FFA500);
+  color: #000;
+  border: 3px solid #000;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 #000;
+  transition: all 0.1s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.mobile-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.mobile-btn.small {
+  width: 50px;
+  height: 30px;
+  border-radius: 15px;
+  font-size: 10px;
+}
+
+.mobile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.mobile-info span {
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.mobile-dpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.dpad-row {
+  display: flex;
+  gap: 5px;
+}
+
+.dpad-up {
+  margin-bottom: 0;
+}
+
+.mobile-dpad .mobile-btn {
+  width: 50px;
+  height: 50px;
+  font-size: 20px;
+}
+
+/* ========================================
+   SPOTIFY LOGIN
+   ======================================== */
+
+.spotify-login-inline {
+  width: 288px;
+  text-align: center;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: linear-gradient(90deg, #1DB954, #1ed760);
+  border-radius: 10px;
+  border: 3px solid #000;
+  box-shadow: 0 3px 0 #000;
+}
+
+.login-text {
+  color: #fff;
+  font-size: 12px;
+  margin-right: 8px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.btn-90s {
+  padding: 6px 12px;
+  border: 2px solid #000;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 0 3px;
+  transition: all 0.1s;
+  background: linear-gradient(180deg, #FFD700, #FFA500);
+  color: #000;
+  box-shadow: 2px 2px 0 #000;
+  font-family: inherit;
+}
+
+.btn-90s:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #000;
+}
+
+.btn-90s:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.btn-90s.skip {
+  background: linear-gradient(180deg, #ccc, #999);
+  color: #333;
+}
+
+/* ========================================
+   UNIVERSITY SELECTION
+   ======================================== */
+
+.university-select {
+  text-align: center;
+  margin: 8px 0;
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.university-select label {
+  display: block;
+  font-size: 12px;
+  color: #000;
+  margin-bottom: 5px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #fff;
+}
+
+.university-select select {
+  padding: 5px 10px;
+  font-size: 12px;
+  border: 2px solid #000;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #FFD700, #FFA500);
+  cursor: pointer;
+  font-family: 'Comic Sans MS', Arial, sans-serif;
+}
+
+/* ========================================
+   MUSIC BAR
+   ======================================== */
+
+#music-bar {
+  width: 288px;
+  height: 50px;
+  background: linear-gradient(90deg, #1DB954, #1ed760);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 3px solid #000;
+  box-shadow: 0 3px 0 #000;
+  margin-top: 10px;
+}
+
+.player-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.music-btn {
+  background: linear-gradient(180deg, #FFD700, #FFA500);
+  border: 2px solid #000;
+  color: #000;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.music-btn:hover {
+  transform: scale(1.1);
+}
+
+.music-btn:active {
+  transform: scale(0.95);
+  box-shadow: 1px 1px 0 #000;
+}
+
+#logout-btn {
+  background: linear-gradient(180deg, #FF6B6B, #FF0000);
+}
+
+.track-info {
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+  text-align: center;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 10px;
+}
+
+.user-info {
+  color: #fff;
+  font-size: 9px;
+  opacity: 0.9;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+}
+
+/* ========================================
+   HOW TO PLAY
+   ======================================== */
+
+.how-to-play {
+  width: 288px;
+  margin-top: 15px;
+  padding: 12px;
+  background: rgba(0,0,0,0.8);
+  border-radius: 10px;
+  border: 3px solid #FFD700;
+  color: #fff;
+}
+
+.how-to-play h3 {
+  margin: 0 0 8px 0;
+  color: #FFD700;
+  font-size: 14px;
+  text-align: center;
+  text-shadow: 2px 2px 0 #FF1493;
+}
+
+.how-to-play p {
+  margin: 5px 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.how-to-play strong {
+  color: #FF69B4;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.hidden {
+  display: none !important;
+}
+
+/* ========================================
+   RESPONSIVE - MOBILE
+   ======================================== */
+
+@media (max-width: 768px) {
+  body {
+    padding: 5px;
+  }
+
+  .game-title {
+    font-size: 26px;
+  }
+
+  .instructions {
+    display: none;
+  }
+
+  .mobile-controls {
+    display: flex;
+  }
+
+  #game-wrapper,
+  #game,
+  .spotify-login-inline,
+  #music-bar,
+  .mobile-controls,
+  .how-to-play {
+    width: 95vw;
+    max-width: 320px;
+  }
+
+  #game {
+    height: auto;
+    aspect-ratio: 288/480;
+  }
+}
+
+@media (max-width: 360px) {
+  .game-title {
+    font-size: 22px;
+  }
+
+  .tagline {
+    font-size: 12px;
+  }
+
+  .mobile-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .mobile-btn.small {
+    width: 45px;
+    height: 25px;
+    font-size: 9px;
+  }
+
+  #music-bar {
+    height: 45px;
+    padding: 0 8px;
+  }
+
+  .music-btn {
+    width: 25px;
+    height: 25px;
+    font-size: 10px;
+  }
+
+  .track-info {
+    font-size: 9px;
+  }
+
+  .how-to-play {
+    padding: 10px;
+  }
+
+  .how-to-play h3 {
+    font-size: 12px;
+  }
+
+  .how-to-play p {
+    font-size: 10px;
+  }
+}
+
+/* ========================================
+   LANDSCAPE MODE WARNING
+   ======================================== */
+
+@media (max-height: 500px) and (orientation: landscape) {
+  body::before {
+    content: 'Please rotate your device to portrait mode for the best experience!';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.9);
+    color: #FFD700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 18px;
+    padding: 20px;
+    z-index: 9999;
+  }
+}
+
+/* ========================================
+   SCROLLBAR STYLING (90s look)
+   ======================================== */
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FF69B4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #FFD700, #FFA500);
+  border: 2px solid #000;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #FFE44D, #FFB52E);
+}
