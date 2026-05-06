@@ -1,6 +1,6 @@
-// Fratty Pipeline v2 — game scene
-// TILE, COLS, VIEW_W, VIEW_H are declared at file scope in entities.js
+// Fratty Pipeline v2 — the game
 window.FP = window.FP || {};
+// TILE, COLS, VIEW_W, VIEW_H are already declared at file scope in entities.js
 const U = FP.util;
 
 class GameScene extends Phaser.Scene {
@@ -8,74 +8,81 @@ class GameScene extends Phaser.Scene {
 
   create() {
     window.gameScene = this;
-    this.gameStarted = false;
+    this.gameStarted = false;  // wait for start button
     this.initState();
     this.buildWorld();
     this.setupInput();
     this.particles = new FP.ParticleSystem(this);
     this.scene.pause();
-    // Auto-begin run when restarting (after game-over / RUN AGAIN)
-    if (window.fpPendingBeginRun) {
-      window.fpPendingBeginRun = false;
-      setTimeout(() => this.beginRun(), 0);
-    }
   }
 
   initState() {
     this.score = 0;
-    this.best = parseInt(localStorage.getItem('fratty-pipeline:best') || '0', 10);
+    this.best = parseInt(localStorage.getItem('fp_best') || '0', 10);
     this.gameOver = false;
     this.paused = false;
+    // lives & meters
     this.lives = 3;
-    this.punkMeter = 0;
-    this.fratMeter = 0;
+    this.punkMeter = 0;       // 0..1
+    this.fratMeter = 0;       // 0..1, when 1 -> sorority pipeline
     this.METER_MAX = 1.0;
     this.hasCigarette = false;
+    // combo
     this.combo = 1;
     this.comboTimer = 0;
-    this.COMBO_TIMEOUT = 2400;
-    this.SCROLL_SPEED = 65;
-    this.scrollAccel = 0.0008;
+    this.COMBO_TIMEOUT = 2400;  // ms
+    // movement
+    this.SCROLL_SPEED = 110;
+    this.scrollAccel = 0.0008;  // per ms
     this.playerCol = Math.floor(COLS / 2);
-    this.playerLane = this.playerCol;
+    this.playerLane = this.playerCol;       // target column (smooth lerp)
     this.playerX = this.playerCol * TILE + TILE / 2;
     this.playerY = VIEW_H * 0.78;
     this.playerVy = 0;
     this.dashCooldown = 0;
-    this.dashing = 0;
+    this.dashing = 0;            // ms remaining
     this.invuln = 0;
     this.charIdx = 0;
     this.skinIdx = 1;
     this.walkFrame = 0; this.walkAccum = 0;
-    this.powerup = null;
-    this.activePower = null;
+    // power-up
+    this.powerup = null;       // {type, ...}
+    this.activePower = null;   // {type, until}
+    // entities
     this.fratHouses = [];
     this.activeFratHouse = null;
     this.trashcans = [];
-    this.venues = [];
-    this.enemies = [];
+    this.venues = [];          // friendly buildings
+    this.enemies = [];         // fratbros, sororities, pledges, RAs
     this.collectibles = [];
-    this.crates = [];
+    this.crates = [];          // power-up crates
     this.fires = [];
-    this.taggedFrat = null;
+    this.taggedFrat = null;    // marked for double points
+    // spawning
     this.spawnTimers = {
       frat: 1500, venue: 800, enemy: 2400, crate: 8000, item: 1200,
     };
+    // row management
     this.VISIBLE_ROWS = Math.ceil(VIEW_H / TILE) + 4;
     this.rows = [];
+    // university
     this.selectedUniversity = (document.getElementById('university')?.value) || 'USC';
     this.fratNamesUsed = 0;
-    this.frozen = 0;
+    this.frozen = 0;     // RA freeze
+    // hit-stop
     this.hitstop = 0;
-    this.boss = null;
+    // boss
+    this.boss = null;    // current boss frat house
+    // accumulator for sub-pixel scroll
     this._scrollAccum = 0;
-    this.tiltLeft = false;
-    this.tiltRight = false;
   }
 
   buildWorld() {
+    // background gets drawn into a tilemap-like graphics that scrolls
+    this.worldLayer = this.add.container(0, 0);
     this.bgLayer = this.add.graphics();
     this.bgLayer.setDepth(-10);
+    // Fill background with paper tone
     this.bgLayer.fillStyle(FP.COLORS.paper, 1);
     this.bgLayer.fillRect(0, 0, VIEW_W, VIEW_H);
     this.initRows();
@@ -99,6 +106,8 @@ class GameScene extends Phaser.Scene {
   }
 
   generateRowData() {
+    // Layout (12 cols): 0=grass, 1=sidewalk, 2-9=road, 10=sidewalk, 11=grass
+    // Center 8 cols are road; vary with road-line every 3 rows
     this.rowCounter = (this.rowCounter || 0) + 1;
     const row = new Array(COLS);
     const lineRow = (this.rowCounter % 3 === 0);
@@ -126,6 +135,7 @@ class GameScene extends Phaser.Scene {
   drawPlayer() {
     this.player.clear();
     if (this.fratMeter >= 1.0 && this.lives > 0) {
+      // Pipelined — sorority outfit
       FP.drawSorority(this.player);
       return;
     }
@@ -133,9 +143,11 @@ class GameScene extends Phaser.Scene {
   }
 
   createInGameUI() {
+    // Charge ring around player when near frat house
     this.chargeRing = this.add.graphics();
     this.chargeRing.setDepth(45);
 
+    // big floating combo text shown briefly
     this.bigCombo = this.add.text(VIEW_W / 2, VIEW_H / 3, '', {
       fontFamily: '"Archivo Black", sans-serif',
       fontSize: '48px',
@@ -144,6 +156,7 @@ class GameScene extends Phaser.Scene {
     });
     this.bigCombo.setOrigin(0.5).setDepth(120).setAlpha(0);
 
+    // Boss name banner
     this.bossBanner = this.add.text(VIEW_W / 2, 30, '', {
       fontFamily: '"Archivo Black", sans-serif',
       fontSize: '18px',
@@ -152,9 +165,11 @@ class GameScene extends Phaser.Scene {
     });
     this.bossBanner.setOrigin(0.5).setScrollFactor(0).setDepth(120).setAlpha(0);
 
+    // Boss HP bar
     this.bossHpBg = this.add.graphics().setDepth(119).setAlpha(0);
     this.bossHpFg = this.add.graphics().setDepth(120).setAlpha(0);
 
+    // Pipeline warning text overlay
     this.warnText = this.add.text(VIEW_W / 2, VIEW_H / 2, '', {
       fontFamily: '"Archivo Black", sans-serif',
       fontSize: '24px',
@@ -165,6 +180,7 @@ class GameScene extends Phaser.Scene {
     });
     this.warnText.setOrigin(0.5).setScrollFactor(0).setDepth(130).setVisible(false);
 
+    // Power-up active indicator
     this.powerActiveText = this.add.text(VIEW_W / 2, VIEW_H - 30, '', {
       fontFamily: '"Archivo Black", sans-serif',
       fontSize: '14px',
@@ -173,6 +189,7 @@ class GameScene extends Phaser.Scene {
     });
     this.powerActiveText.setOrigin(0.5).setScrollFactor(0).setDepth(120);
 
+    // F prompt (when near trashcan with cig)
     this.fPrompt = this.add.text(VIEW_W / 2, VIEW_H - 56, '', {
       fontFamily: '"Archivo Black", sans-serif',
       fontSize: '14px',
@@ -213,12 +230,14 @@ class GameScene extends Phaser.Scene {
       this.particles.update(delta);
       return;
     }
+    // P toggles pause via input
     if (Phaser.Input.Keyboard.JustDown(this.keys.p)) {
       window.fpTogglePause();
       return;
     }
 
     const dt = delta;
+    // tick timers
     if (this.dashCooldown > 0) this.dashCooldown -= dt;
     if (this.dashing > 0) this.dashing -= dt;
     if (this.invuln > 0) this.invuln -= dt;
@@ -232,19 +251,23 @@ class GameScene extends Phaser.Scene {
       if (this.comboTimer <= 0) { this.combo = 1; this.updateComboHud(); }
     }
 
+    // scroll
     let scrollSpeed = this.SCROLL_SPEED;
-    if (this.fratMeter > 0.6) scrollSpeed *= 0.7;
+    if (this.fratMeter > 0.6) scrollSpeed *= 0.7; // slowed when being pipelined
     if (this.activePower?.type === 'skateboard') scrollSpeed *= 1.7;
     if (this.frozen > 0) scrollSpeed *= 0.2;
     this.SCROLL_SPEED = Math.min(220, this.SCROLL_SPEED + this.scrollAccel * dt);
     const dy = scrollSpeed * (dt / 1000);
     this.scrollWorld(dy);
 
+    // player input
     this.handleMovement(dt);
+    // smooth lane lerp
     const targetX = this.playerLane * TILE + TILE / 2;
     const lerpAmt = Math.min(1, (dt / 1000) * 18);
     this.playerX = U.lerp(this.playerX, targetX, lerpAmt);
     this.player.setPosition(this.playerX - TILE / 2, this.playerY - TILE / 2);
+    // walk animation
     this.walkAccum += dt;
     if (this.walkAccum > 130) {
       this.walkAccum = 0;
@@ -252,12 +275,14 @@ class GameScene extends Phaser.Scene {
       this.drawPlayer();
     }
 
+    // combo bar update
     if (this.combo > 1) {
       const pct = U.clamp(this.comboTimer / this.COMBO_TIMEOUT, 0, 1);
       const cb = document.getElementById('hud-combo-bar');
       if (cb) cb.style.width = (pct * 100) + '%';
     }
 
+    // entity updates
     this.updateFratHouses(dt);
     this.updateEnemies(dt);
     this.updateVenues(dt);
@@ -266,12 +291,17 @@ class GameScene extends Phaser.Scene {
     this.updateFires(dt);
     this.updateChargeRing();
 
+    // spawning
     this.handleSpawning(dt);
 
+    // F key — burn
     if (Phaser.Input.Keyboard.JustDown(this.keys.f)) this.tryBurn();
+    // Q — power up
     if (Phaser.Input.Keyboard.JustDown(this.keys.q)) this.tryUsePowerup();
+    // SPACE — dash
     if (Phaser.Input.Keyboard.JustDown(this.keys.space)) this.tryDash();
 
+    // score tick (small per frame)
     this.score += dt * 0.012 * this.combo;
     this.updateHud();
     this.particles.update(dt);
@@ -279,8 +309,8 @@ class GameScene extends Phaser.Scene {
 
   handleMovement(dt) {
     const k = this.keys;
-    const leftDown = k.left.isDown || k.a.isDown || this.tiltLeft;
-    const rightDown = k.right.isDown || k.d.isDown || this.tiltRight;
+    const leftDown = k.left.isDown || k.a.isDown;
+    const rightDown = k.right.isDown || k.d.isDown;
     const upDown = k.up.isDown || k.w.isDown;
     const downDown = k.down.isDown || k.s.isDown;
 
@@ -291,20 +321,24 @@ class GameScene extends Phaser.Scene {
     this._lastKeys.l = leftDown; this._lastKeys.r = rightDown;
     this._lastKeys.u = upDown; this._lastKeys.d = downDown;
 
+    // discrete tap = step
     if (this.frozen > 0) return;
-    if (lJust && this.playerLane > 1) { this.playerLane--; FP.audio.step(); if (typeof Haptic !== 'undefined') Haptic.select(); }
-    else if (rJust && this.playerLane < COLS - 2) { this.playerLane++; FP.audio.step(); if (typeof Haptic !== 'undefined') Haptic.select(); }
+    if (lJust && this.playerLane > 1) { this.playerLane--; FP.audio.step(); }
+    else if (rJust && this.playerLane < COLS - 2) { this.playerLane++; FP.audio.step(); }
+    // hold-glide: continuous when held > 220ms
     this._holdL = leftDown ? (this._holdL || 0) + dt : 0;
     this._holdR = rightDown ? (this._holdR || 0) + dt : 0;
     if (this._holdL > 220 && this.playerLane > 1) {
-      this.playerLane--; this._holdL = 110; FP.audio.step(); if (typeof Haptic !== 'undefined') Haptic.select();
+      this.playerLane--; this._holdL = 110; FP.audio.step();
     }
     if (this._holdR > 220 && this.playerLane < COLS - 2) {
-      this.playerLane++; this._holdR = 110; FP.audio.step(); if (typeof Haptic !== 'undefined') Haptic.select();
+      this.playerLane++; this._holdR = 110; FP.audio.step();
     }
+    // up/down moves the player Y in fixed steps
     const targetMin = TILE * 3, targetMax = VIEW_H - TILE * 1.5;
     if (uJust) this.playerY = Math.max(targetMin, this.playerY - TILE);
     if (dJust) this.playerY = Math.min(targetMax, this.playerY + TILE);
+    // hold to move
     this._holdU = upDown ? (this._holdU || 0) + dt : 0;
     this._holdD = downDown ? (this._holdD || 0) + dt : 0;
     if (this._holdU > 220) { this.playerY = Math.max(targetMin, this.playerY - TILE); this._holdU = 110; }
@@ -326,22 +360,15 @@ class GameScene extends Phaser.Scene {
         topY = r.y;
       }
     }
+    // move all entities
     const moveAll = (arr, killOff = true) => {
-      for (const e of arr) {
-        e.y += dy;
-        if (e.gfx) e.gfx.setY(Math.round(e.y));
-        if (e.label) e.label.y = Math.round(e.y - 14);
-        if (e.tint) e.tint.setY(Math.round(e.y));
-        if (e.tagGfx) e.tagGfx.setY(Math.round(e.y + 80));
-      }
+      for (const e of arr) { e.y += dy; if (e.gfx) e.gfx.setY(Math.round(e.y)); if (e.label) e.label.y = Math.round(e.y - 14); }
       if (killOff) {
         for (let i = arr.length - 1; i >= 0; i--) {
           if (arr[i].y > VIEW_H + TILE * 5) {
             const e = arr[i];
             if (e.gfx) e.gfx.destroy();
             if (e.label) e.label.destroy();
-            if (e.tint) e.tint.destroy();
-            if (e.tagGfx) e.tagGfx.destroy();
             if (e === this.boss) this.endBoss(false);
             arr.splice(i, 1);
           }
@@ -373,11 +400,15 @@ class GameScene extends Phaser.Scene {
       }
     }
 
+    // Risk-reward: lingering near a frat charges PUNK meter faster (and FRAT meter)
     if (this.activeFratHouse && nearestDist < TILE * 4 && this.invuln <= 0 && !this.hasCigarette) {
       const intensity = 1 - (nearestDist / (TILE * 4));
+      // PUNK charges with risk
       this.punkMeter = U.clamp(this.punkMeter + intensity * 0.0008 * dt, 0, 1);
+      // FRAT also rises (risk side)
       const fratRate = (this.activeFratHouse.isBoss ? 0.0012 : 0.0007);
       this.fratMeter = U.clamp(this.fratMeter + intensity * fratRate * dt, 0, 1);
+      // gentle pull
       const cx = this.activeFratHouse.x + (TILE * 1.5);
       const pull = intensity * 0.025;
       this.playerLane = U.lerp(this.playerLane, cx / TILE, pull);
@@ -409,6 +440,7 @@ class GameScene extends Phaser.Scene {
     this.fratNamesUsed++;
     const id = houseName + '_' + this.fratNamesUsed;
 
+    // Pick a side (left/right) — leave space for venues on opposite side
     const side = (Math.random() < 0.5) ? 'left' : 'right';
     const col = side === 'left' ? 1 : COLS - 4;
     const x = col * TILE;
@@ -420,9 +452,9 @@ class GameScene extends Phaser.Scene {
     gfx.setPosition(x, y);
     gfx.setDepth(20);
 
-    let tint = null;
+    // boss tint
     if (isBoss) {
-      tint = this.add.graphics();
+      const tint = this.add.graphics();
       tint.fillStyle(0xff2d6f, 0.18);
       tint.fillRect(0, 0, w, h);
       tint.setPosition(x, y);
@@ -430,21 +462,22 @@ class GameScene extends Phaser.Scene {
     }
 
     const abbr = FP.greekAbbr(houseName);
-    const labelY = y + h * 0.355;
+    const labelY = y + h * 0.165;
     const label = this.add.text(x + w / 2, labelY, abbr, {
       fontFamily: '"Archivo Black", sans-serif',
-      fontSize: isBoss ? '26px' : '20px',
+      fontSize: isBoss ? '20px' : '15px',
       color: isBoss ? '#ff2d6f' : '#0a0a0a',
     }).setOrigin(0.5).setDepth(22);
 
     const house = {
-      gfx, label, tint, x, y, side, col, w, h,
+      gfx, label, x, y, side, col, w, h,
       name: houseName, id, isBurned: false, isBoss,
       hp: isBoss ? 3 : 1,
       isActive: true,
     };
     this.fratHouses.push(house);
 
+    // trashcan
     const trashCol = side === 'left' ? col + 3 : col - 1;
     const tg = this.add.graphics();
     FP.drawTrashcan(tg);
@@ -455,13 +488,13 @@ class GameScene extends Phaser.Scene {
     if (isBoss) {
       this.boss = house;
       this.showBossBanner('BOSS: ' + houseName);
+      // Bosses burn in 3 hits — accompanied by 3 mini-bros
       for (let i = 0; i < 3; i++) {
         this.spawnEnemy('fratbro', y + i * 60);
       }
       FP.audio.combo(8);
     }
 
-    this.updateFratRowList();
     return house;
   }
 
@@ -486,18 +519,6 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  updateFratRowList() {
-    const list = document.getElementById('row-list');
-    if (!list) return;
-    list.innerHTML = '';
-    for (const h of this.fratHouses) {
-      const item = document.createElement('div');
-      item.className = 'row-list-item' + (h.isBurned ? ' burned' : '');
-      item.innerHTML = `<span>${FP.greekAbbr(h.name)}</span><span>${h.isBoss ? '★' : ''}</span>`;
-      list.appendChild(item);
-    }
-  }
-
   // ==================== ENEMIES ====================
   spawnEnemy(kind, atY = -TILE) {
     const col = 2 + Math.floor(Math.random() * (COLS - 4));
@@ -513,8 +534,10 @@ class GameScene extends Phaser.Scene {
       x: col * TILE, y: atY,
       col, dir: Math.random() < 0.5 ? -1 : 1,
       moveTimer: 0,
+      // behaviors
       chaseRadius: kind === 'sorority' ? TILE * 5 : (kind === 'ra' ? TILE * 3 : TILE * 2),
       hitRadius: TILE * 0.85,
+      // RA freeze radius
       freezeRadius: kind === 'ra' ? TILE * 2.5 : 0,
     };
     this.enemies.push(enemy);
@@ -526,6 +549,7 @@ class GameScene extends Phaser.Scene {
       e.moveTimer += dt;
 
       if (e.kind === 'sorority') {
+        // chases player horizontally
         const d = U.dist(this.playerX, this.playerY, e.x + TILE / 2, e.y + TILE / 2);
         if (d < e.chaseRadius && e.moveTimer > 220) {
           e.moveTimer = 0;
@@ -535,6 +559,7 @@ class GameScene extends Phaser.Scene {
           e.gfx.setX(e.x);
         }
       } else if (e.kind === 'pledge') {
+        // moves slowly in pack pattern
         if (e.moveTimer > 700) {
           e.moveTimer = 0;
           const newCol = e.col + e.dir;
@@ -559,9 +584,11 @@ class GameScene extends Phaser.Scene {
         }
       }
 
+      // contact / proximity effects
       const d = U.dist(this.playerX, this.playerY, e.x + TILE / 2, e.y + TILE / 2);
 
       if (this.activePower?.type === 'moshpit') {
+        // mosh pit: smash enemies on contact
         if (d < e.hitRadius * 1.4) {
           this.killEnemy(e, true);
           continue;
@@ -569,18 +596,21 @@ class GameScene extends Phaser.Scene {
       }
 
       if (d < e.hitRadius && this.invuln <= 0 && !this.hasCigarette) {
+        // damage events differ
         if (e.kind === 'fratbro' || e.kind === 'sorority' || e.kind === 'pledge') {
+          // bumps frat meter quickly
           this.fratMeter = U.clamp(this.fratMeter + (e.kind === 'sorority' ? 0.18 : 0.12), 0, 1);
           this.combo = 1; this.updateComboHud();
           this.flashHit();
           this.invuln = 700;
+          // bounce away
           this.playerLane = U.clamp(this.playerLane + (this.playerX < e.x ? -1 : 1), 1, COLS - 2);
           FP.audio.hit();
-          if (typeof Haptic !== 'undefined') Haptic.error();
           this.particles.burst(this.playerX, this.playerY, { count: 14, colors: [0xff2d6f, 0xffd23f, 0xff7a00], size: 5, life: 500 });
         }
       }
 
+      // RA freeze
       if (e.kind === 'ra' && d < e.freezeRadius) {
         this.frozen = Math.max(this.frozen, 250);
         this.warnText.setText('FROZEN BY RA');
@@ -632,7 +662,6 @@ class GameScene extends Phaser.Scene {
         v.consumed = true;
         this.collectShopItem(v.kind);
         FP.audio.bigPickup();
-        if (typeof Haptic !== 'undefined') Haptic.success();
       } else if (v.visited && !inside && !v.reachedTop) {
         v.visited = false;
       }
@@ -640,7 +669,7 @@ class GameScene extends Phaser.Scene {
   }
 
   collectShopItem(kind) {
-    const map = { coffee: 250, record: 350, skate: 300 };
+    const map = { coffee: 250, vinyl: 350, skate: 300 };
     const base = map[kind] || 200;
     const pts = base * this.combo;
     this.addScore(pts, '+' + pts + ' ' + kind, '#2ad17b');
@@ -665,13 +694,13 @@ class GameScene extends Phaser.Scene {
       const c = this.collectibles[i];
       const d = U.dist(this.playerX, this.playerY, c.x + TILE / 2, c.y + TILE / 2);
       if (d < TILE * 0.8) {
+        // collect
         const ptsMap = { zine: 150, coffee: 100, vinyl: 175, skateboard: 150 };
         const pts = (ptsMap[c.type] || 100) * this.combo;
         this.addScore(pts, '+' + pts, '#ff2d6f');
         this.punkMeter = U.clamp(this.punkMeter + 0.08, 0, 1);
         this.bumpCombo();
         FP.audio.pickup();
-        if (typeof Haptic !== 'undefined') Haptic.medium();
         this.particles.burst(c.x + TILE / 2, c.y + TILE / 2, { count: 8, colors: [0xff2d6f, 0xffd23f], size: 4 });
         c.gfx.destroy();
         this.collectibles.splice(i, 1);
@@ -688,6 +717,7 @@ class GameScene extends Phaser.Scene {
     FP.drawPowerupCrate(gfx, type);
     gfx.setPosition(col * TILE, -TILE);
     gfx.setDepth(38);
+    // bounce tween
     this.tweens.add({ targets: gfx, scale: 1.06, duration: 500, yoyo: true, repeat: -1 });
     this.crates.push({ gfx, x: col * TILE, y: -TILE, type });
   }
@@ -699,7 +729,6 @@ class GameScene extends Phaser.Scene {
       if (d < TILE) {
         this.powerup = { type: c.type };
         FP.audio.powerup();
-        if (typeof Haptic !== 'undefined') Haptic.medium();
         this.addScore(100 * this.combo, '+POWER', '#6effff');
         this.particles.burst(c.x + TILE / 2, c.y + TILE / 2, { count: 18, colors: [0x6effff, 0xffd23f] });
         c.gfx.destroy();
@@ -712,13 +741,16 @@ class GameScene extends Phaser.Scene {
   tryUsePowerup() {
     if (!this.powerup) return;
     const t = this.powerup.type;
+    const pu = FP.POWERUPS[t];
     this.activePower = { type: t, until: 4000 };
     if (t === 'skateboard') {
       this.activePower.until = 4000;
       this.particles.burst(this.playerX, this.playerY, { count: 14, colors: [0x6effff], size: 5 });
     } else if (t === 'spraypaint') {
+      // tag the active frat house
       if (this.activeFratHouse) {
         this.taggedFrat = this.activeFratHouse;
+        // visual mark
         const tag = this.add.graphics();
         tag.lineStyle(4, 0xff2d6f);
         tag.beginPath();
@@ -729,21 +761,22 @@ class GameScene extends Phaser.Scene {
         this.activeFratHouse.tagGfx = tag;
         this.activePower = null;
       } else {
+        // need a target
         this.warnText.setText('NO FRAT TO TAG');
         this.warnText.setVisible(true);
         this.time.delayedCall(900, () => this.warnText.setVisible(false));
         this.activePower = null;
-        this.powerup = null;
-        this.updateHud();
         return;
       }
     } else if (t === 'boombox') {
+      // knockback wave
       this.activePower = null;
       const wave = this.add.graphics().setDepth(60);
-      this.tweens.addCounter({
+      let r = 8;
+      const tween = this.tweens.addCounter({
         from: 0, to: 1, duration: 380,
         onUpdate: (tw) => {
-          const r = U.lerp(8, TILE * 5, tw.getValue());
+          r = U.lerp(8, TILE * 5, tw.getValue());
           wave.clear();
           wave.lineStyle(4, 0xff7a00, 1 - tw.getValue());
           wave.strokeCircle(this.playerX, this.playerY, r);
@@ -752,9 +785,11 @@ class GameScene extends Phaser.Scene {
         },
         onComplete: () => wave.destroy(),
       });
+      // push enemies
       for (const e of this.enemies) {
         const d = U.dist(this.playerX, this.playerY, e.x + TILE / 2, e.y + TILE / 2);
         if (d < TILE * 5) {
+          // push horizontally to nearest edge
           if (e.x + TILE / 2 < this.playerX) {
             e.col = Math.max(1, e.col - 3);
           } else {
@@ -771,6 +806,7 @@ class GameScene extends Phaser.Scene {
       this.invuln = 4000;
     } else if (t === 'zinebomb') {
       this.activePower = null;
+      // clear all enemies
       for (const e of [...this.enemies]) {
         this.particles.burst(e.x + TILE / 2, e.y + TILE / 2, { count: 16, colors: [0xff2d6f, 0xffd23f, 0xff7a00] });
         e.gfx.destroy();
@@ -807,6 +843,7 @@ class GameScene extends Phaser.Scene {
 
   tryBurn() {
     if (!this.hasCigarette) return;
+    // find nearby trashcan
     let best = null, bestD = Infinity;
     for (const t of this.trashcans) {
       if (!t.house || t.house.isBurned) continue;
@@ -838,6 +875,7 @@ class GameScene extends Phaser.Scene {
       }
       return;
     }
+
     this.actuallyBurn(house, false);
   }
 
@@ -850,21 +888,23 @@ class GameScene extends Phaser.Scene {
     if (multiplier === 2) this.taggedFrat = null;
     const pts = 1500 * multiplier * this.combo;
     this.addScore(pts, multiplier === 2 ? '+TAGGED ×2!' : 'BURNED!', '#ff4d2a');
-    this.bumpCombo(2);
+    this.bumpCombo(2); // big combo bump
     this.hasCigarette = false; this.drawPlayer();
     this.invuln = 1200;
+    // fire effect
     const fg = this.add.graphics();
     fg.setDepth(22);
     fg.setPosition(house.x, house.y);
     this.fires.push({ gfx: fg, x: house.x, y: house.y, w: house.w, frame: 0, frameTimer: 100, life: 3000 });
+    // screen
     this.cameras.main.flash(280, 255, 122, 0);
     this.cameras.main.shake(380, isBoss ? 0.03 : 0.02);
     this.hitstop = 100;
+    // particles
     this.particles.burst(house.x + house.w / 2, house.y + house.h / 2, { count: 36, colors: [0xff4d2a, 0xffd23f, 0xff7a00], size: 6, life: 800 });
     this.particles.smoke(house.x + house.w / 2, house.y + house.h / 2, { count: 10, dark: true });
     FP.audio.burn();
     this.bigComboText('BURNED 🔥');
-    this.updateFratRowList();
   }
 
   updateFires(dt) {
@@ -885,6 +925,7 @@ class GameScene extends Phaser.Scene {
   // ==================== SPAWN SCHEDULER ====================
   handleSpawning(dt) {
     if (this.boss) {
+      // during boss: only enemies + maybe a crate
       this.spawnTimers.enemy -= dt;
       if (this.spawnTimers.enemy <= 0) {
         this.spawnTimers.enemy = U.rand(1500, 2200);
@@ -892,16 +933,18 @@ class GameScene extends Phaser.Scene {
       }
       return;
     }
+    // increase difficulty over time
     const time = this.score * 0.001;
     this.spawnTimers.frat -= dt;
     if (this.spawnTimers.frat <= 0 && !this.activeFratHouse) {
+      // every 3rd frat is a boss after first 30s
       const boss = (time > 30 && this.fratNamesUsed > 2 && this.fratNamesUsed % 4 === 0);
       this.spawnFratHouse(boss);
       this.spawnTimers.frat = U.rand(3500, 5500);
     }
     this.spawnTimers.venue -= dt;
     if (this.spawnTimers.venue <= 0) {
-      this.spawnVenue(U.pick(['coffee', 'record', 'skate']));
+      this.spawnVenue(U.pick(['coffee', 'vinyl', 'skate']));
       this.spawnTimers.venue = U.rand(2400, 3800);
     }
     this.spawnTimers.enemy -= dt;
@@ -930,7 +973,6 @@ class GameScene extends Phaser.Scene {
     this.lives -= 1;
     this.fratMeter = 0; this.punkMeter = 0; this.hasCigarette = false;
     FP.audio.transform();
-    if (typeof Haptic !== 'undefined') Haptic.heavy();
     this.cameras.main.shake(420, 0.025);
     this.cameras.main.flash(380, 255, 90, 160);
     this.combo = 1; this.updateComboHud();
@@ -949,10 +991,9 @@ class GameScene extends Phaser.Scene {
     this.gameOver = true;
     if (this.score > this.best) {
       this.best = Math.floor(this.score);
-      localStorage.setItem('fratty-pipeline:best', '' + this.best);
+      localStorage.setItem('fp_best', '' + this.best);
     }
     FP.audio.gameover();
-    if (typeof Haptic !== 'undefined') Haptic.error();
     this.cameras.main.shake(600, 0.03);
     window.fpShowEnd(Math.floor(this.score), this.best);
   }
@@ -1021,6 +1062,7 @@ class GameScene extends Phaser.Scene {
     document.getElementById('hud-burned').textContent = this.fratHouses.filter(h => h.isBurned).length;
     document.getElementById('meter-punk-fill').style.width = (this.punkMeter * 100) + '%';
     document.getElementById('meter-frat-fill').style.width = (this.fratMeter * 100) + '%';
+    // lives row
     const lr = document.getElementById('hud-lives');
     if (lr) {
       lr.innerHTML = '';
@@ -1030,6 +1072,7 @@ class GameScene extends Phaser.Scene {
         lr.appendChild(div);
       }
     }
+    // power-up slot
     const ps = document.getElementById('powerup-slot');
     if (ps) {
       if (this.powerup) {
@@ -1041,12 +1084,14 @@ class GameScene extends Phaser.Scene {
         ps.innerHTML = '<div class="pup-empty">empty</div>';
       }
     }
+    // active power label
     if (this.activePower) {
       const pu = FP.POWERUPS[this.activePower.type];
       this.powerActiveText.setText(pu.name + ' ' + (this.activePower.until/1000).toFixed(1) + 's');
     } else {
       this.powerActiveText.setText('');
     }
+    // F prompt
     if (this.hasCigarette) {
       let near = false;
       for (const t of this.trashcans) {
@@ -1064,7 +1109,9 @@ class GameScene extends Phaser.Scene {
     this.dashCooldown = 1100;
     this.invuln = 320;
     FP.audio.dash();
+    // dash up
     this.playerY = Math.max(TILE * 3, this.playerY - TILE * 2);
+    // particles
     for (let i = 0; i < 6; i++) {
       this.time.delayedCall(i * 30, () => {
         this.particles.trail(this.playerX, this.playerY + TILE * 0.4, 0xff2d6f);

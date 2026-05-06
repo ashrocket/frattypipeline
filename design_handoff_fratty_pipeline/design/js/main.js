@@ -1,5 +1,6 @@
 // Boot + global UI glue
 window.addEventListener('load', () => {
+  // Initialize Phaser game
   const game = new Phaser.Game(window.GameConfig);
   window.fpGame = game;
 
@@ -31,7 +32,7 @@ window.addEventListener('load', () => {
     FP.audio.resume();
   });
 
-  // Pause / game-over overlay
+  // Pause overlay
   const overlay = document.getElementById('overlay');
   const overlayBtn = document.getElementById('overlay-btn');
   const overlayTitle = document.getElementById('overlay-title');
@@ -74,7 +75,6 @@ window.addEventListener('load', () => {
     if (isEnd) {
       isEnd = false; isPaused = false;
       overlay.classList.add('hidden');
-      window.fpPendingBeginRun = true;
       window.gameScene.scene.restart();
     } else {
       window.fpTogglePause();
@@ -86,7 +86,7 @@ window.addEventListener('load', () => {
     if (window.gameScene) window.gameScene.selectedUniversity = e.target.value;
   });
 
-  // Resize game canvas to fit viewport
+  // Resize game to fit viewport (height-priority since 720 is tall)
   function resize() {
     const wrap = document.getElementById('game-wrapper');
     if (!wrap) return;
@@ -102,34 +102,4 @@ window.addEventListener('load', () => {
   }
   window.addEventListener('resize', resize);
   setTimeout(resize, 100);
-
-  // ─── Tilt steering ──────────────────────────────────────────────────────────
-  const TILT_DEAD = 14;
-  let _tiltLeft = false, _tiltRight = false;
-  Motion.onTilt((gamma) => {
-    const newLeft = gamma < -TILT_DEAD;
-    const newRight = gamma > TILT_DEAD;
-    if (newLeft !== _tiltLeft || newRight !== _tiltRight) {
-      _tiltLeft = newLeft;
-      _tiltRight = newRight;
-      if (window.gameScene) {
-        window.gameScene.tiltLeft  = _tiltLeft;
-        window.gameScene.tiltRight = _tiltRight;
-      }
-    }
-  });
-
-  const _motionBtn = document.getElementById('motion-btn');
-  if (Motion.isMobile()) {
-    if (Motion.needsPermission()) {
-      if (_motionBtn) {
-        _motionBtn.style.display = '';
-        _motionBtn.addEventListener('click', async () => {
-          if (await Motion.start()) _motionBtn.remove();
-        });
-      }
-    } else {
-      Motion.start();
-    }
-  }
 });

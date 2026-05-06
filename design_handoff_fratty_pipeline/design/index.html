@@ -13,9 +13,6 @@
   };
 </script>
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Grotesk:wght@400;500;700&family=Archivo+Black&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -76,53 +73,19 @@
         </div>
       </div>
       <div id="start-overlay" class="overlay">
-        <div class="overlay-card large start-card">
+        <div class="overlay-card large">
           <div class="overlay-title">FRATTY PIPELINE</div>
           <div class="overlay-sub">don't get pipelined. burn it down.</div>
-
-          <p class="narrative">Greek Row is eating this campus alive. Stay connected to the underground — snag vinyl from the record shop, grab zines off the street, fuel up on local coffee, shred away on a skateboard. Fill your <strong>PUNK</strong> meter, light up, reach the trashcan, and <strong>BURN&nbsp;IT&nbsp;DOWN</strong>.</p>
-
-          <div class="legend-grid">
-            <div class="legend-section">
-              <div class="legend-hd">GRAB THESE</div>
-              <div class="legend-item"><span class="ldot" style="background:#ff2d6f"></span>Vinyl — +PUNK pts</div>
-              <div class="legend-item"><span class="ldot" style="background:#ffd23f"></span>Zine — +PUNK pts</div>
-              <div class="legend-item"><span class="ldot" style="background:#ff7a00"></span>Coffee — +PUNK pts</div>
-              <div class="legend-item"><span class="ldot" style="background:#6effff"></span>Skateboard — +speed</div>
-              <div class="legend-hd" style="margin-top:6px">ENTER VENUES</div>
-              <div class="legend-item"><span class="ldot" style="background:#3a8559"></span>Coffee shop — big +PUNK</div>
-              <div class="legend-item"><span class="ldot" style="background:#d9325b"></span>Record store — big +PUNK</div>
-              <div class="legend-item"><span class="ldot" style="background:#ff7a00"></span>Skate park — big +PUNK</div>
-            </div>
-            <div class="legend-section">
-              <div class="legend-hd">DODGE THESE</div>
-              <div class="legend-item"><span class="ldot" style="background:#ff7a9e"></span>Fratbro — fills FRAT</div>
-              <div class="legend-item"><span class="ldot" style="background:#8a8a8a"></span>Pledge — patrols</div>
-              <div class="legend-item"><span class="ldot" style="background:#ffd23f;border-color:#0a0a0a"></span>Sorority — chases you</div>
-              <div class="legend-item"><span class="ldot" style="background:#2a4a8a"></span>RA — freezes you</div>
-              <div class="legend-hd" style="margin-top:6px">POWER-UPS (Q)</div>
-              <div class="legend-item"><span class="ldot" style="background:#6effff"></span>Skate — speed boost</div>
-              <div class="legend-item"><span class="ldot" style="background:#ff2d6f"></span>Spray — tag frat ×2 pts</div>
-              <div class="legend-item"><span class="ldot" style="background:#ff7a00"></span>Boombox — knockback</div>
-              <div class="legend-item"><span class="ldot" style="background:#ffd23f"></span>Mosh pit — invincible</div>
-              <div class="legend-item"><span class="ldot" style="background:#ff2d6f"></span>Zine bomb — clears all</div>
-            </div>
-          </div>
-
-          <div class="burn-loop">
-            <span>near frat → PUNK fills</span>
-            <span class="ba">→</span>
-            <span>PUNK max → 🚬 lit</span>
-            <span class="ba">→</span>
-            <span>reach trashcan → F</span>
-            <span class="ba">→</span>
-            <span style="color:#ff7a00">🔥 BURNED</span>
-          </div>
-
           <ul class="how">
-            <li><kbd>WASD</kbd>/<kbd>ARROWS</kbd> move · <kbd>SPACE</kbd> dash · <kbd>F</kbd> burn</li>
+            <li><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> move (hold to glide, tap to step)</li>
+            <li><kbd>SPACE</kbd> dash · <kbd>F</kbd> light it up at trash</li>
             <li><kbd>Q</kbd> use power-up · <kbd>P</kbd> pause</li>
           </ul>
+          <div class="how-grid">
+            <div><b>RISK</b> · linger near a frat house to charge faster</div>
+            <div><b>COMBO</b> · chain pickups before timer drops</div>
+            <div><b>BURN</b> · max PUNK = cigarette · dunk in trash near house</div>
+          </div>
           <button id="start-btn" class="btn primary big">START RUN</button>
         </div>
       </div>
@@ -153,7 +116,6 @@
   </footer>
 </div>
 
-<script src="js/haptics.js"></script>
 <script src="js/util.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/particles.js"></script>
@@ -161,6 +123,5 @@
 <script src="js/game.js"></script>
 <script src="js/spotify.js"></script>
 <script src="js/main.js"></script>
-<button id="motion-btn" aria-label="Enable tilt controls" style="display:none;position:fixed;bottom:80px;right:16px;z-index:9999;background:rgba(0,0,0,0.8);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:7px 14px;font-size:11px;font-family:monospace;letter-spacing:.05em;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">↺ TILT</button>
 </body>
 </html>
