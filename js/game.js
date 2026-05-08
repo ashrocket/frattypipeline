@@ -44,6 +44,8 @@ class GameScene extends Phaser.Scene {
     this.playerVlane = 0;
     this.joy = { active: false, id: -1, ox: 0, oy: 0, dx: 0, dy: 0 };
     this._swipe = { dx: 0, active: false };
+    this._flipTap = { dir: 0, t: 0 };
+    this.insideVenue = false;
     this.dashCooldown = 0;
     this.dashing = 0;
     this.invuln = 0;
@@ -265,7 +267,15 @@ class GameScene extends Phaser.Scene {
       if (absY > absX && dy < 0) {
         this.kickAccelerate();
       } else if (absX > absY) {
-        this._swipe = { dx: dx > 0 ? 1 : -1, active: true };
+        const swipeDir = dx > 0 ? 1 : -1;
+        const now = this.time.now;
+        if (swipeDir === this._flipTap.dir && now - this._flipTap.t < 300) {
+          this.doKickflip();
+          this._flipTap = { dir: 0, t: 0 };
+        } else {
+          this._flipTap = { dir: swipeDir, t: now };
+          this._swipe = { dx: swipeDir, active: true };
+        }
       } else if (absY > absX && dy > 0) {
         this.SCROLL_SPEED = Math.max(65, this.SCROLL_SPEED * 0.65);
       }
@@ -280,6 +290,22 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.shake(90, 0.014);
     FP.audio.step();
     if (typeof Haptic !== 'undefined') Haptic.heavy();
+  }
+
+  doKickflip() {
+    if (this.invuln > 0) return;
+    this.invuln = 300;
+    this.particles.burst(this.playerX, this.playerY - 10, {
+      count: 16, colors: [0x6effff, 0xff2d6f, 0xffd23f], size: 5, life: 420,
+    });
+    this.cameras.main.shake(60, 0.01);
+    if (typeof Haptic !== 'undefined') Haptic.medium();
+    FP.audio.pickup();
+    const t = this.add.text(this.playerX, this.playerY - 20, '+FLIP', {
+      fontFamily: 'VT323', fontSize: '20px', color: '#6effff',
+      stroke: '#000000', strokeThickness: 2,
+    }).setDepth(100).setOrigin(0.5);
+    this.tweens.add({ targets: t, y: t.y - 28, alpha: 0, duration: 700, onComplete: () => t.destroy() });
   }
 
   beginRun() {
@@ -326,6 +352,7 @@ class GameScene extends Phaser.Scene {
     if (this.fratMeter > 0.6) scrollSpeed *= 0.88;
     if (this.activePower?.type === 'skateboard') scrollSpeed *= 1.7;
     if (this.frozen > 0) scrollSpeed *= 0.2;
+    if (this.insideVenue) scrollSpeed *= 0.32;
     this.SCROLL_SPEED = Math.min(220, this.SCROLL_SPEED + this.scrollAccel * dt);
     const dy = scrollSpeed * (dt / 1000);
     this.scrollWorld(dy);
@@ -334,7 +361,8 @@ class GameScene extends Phaser.Scene {
     const targetX = this.playerLane * TILE + TILE / 2;
     const lerpAmt = Math.min(1, (dt / 1000) * 18);
     this.playerX = U.lerp(this.playerX, targetX, lerpAmt);
-    this.player.setPosition(this.playerX - TILE / 2, this.playerY - TILE / 2);
+    const _bob = (this.walkFrame === 1 || this.walkFrame === 3) ? -1 : 1;
+    this.player.setPosition(this.playerX - TILE / 2, this.playerY - TILE / 2 + _bob);
     this.walkAccum += dt;
     if (this.walkAccum > 130) {
       this.walkAccum = 0;
@@ -373,6 +401,20 @@ class GameScene extends Phaser.Scene {
     const k = this.keys;
     const JOY_DEAD = 10;
     const JOY_MAX = 55;
+
+    // Kickflip: double-tap left or right within 220ms
+    const leftJust = Phaser.Input.Keyboard.JustDown(k.left) || Phaser.Input.Keyboard.JustDown(k.a);
+    const rightJust = Phaser.Input.Keyboard.JustDown(k.right) || Phaser.Input.Keyboard.JustDown(k.d);
+    if (leftJust || rightJust) {
+      const dir = leftJust ? -1 : 1;
+      const now = this.time.now;
+      if (dir === this._flipTap.dir && now - this._flipTap.t < 220) {
+        this.doKickflip();
+        this._flipTap = { dir: 0, t: 0 };
+      } else {
+        this._flipTap = { dir, t: now };
+      }
+    }
 
     // Combine keyboard + tilt + joystick into -1..1 analog axes
     let laneDir = 0, vertDir = 0;
@@ -481,8 +523,7 @@ class GameScene extends Phaser.Scene {
     if (this.activeFratHouse && nearestDist < TILE * 4 && this.invuln <= 0 && !this.hasCigarette) {
       const intensity = 1 - (nearestDist / (TILE * 4));
       this.punkMeter = U.clamp(this.punkMeter + intensity * 0.0008 * dt, 0, 1);
-      const fratRate = (this.activeFratHouse.isBoss ? 0.0012 : 0.0007);
-      this.fratMeter = U.clamp(this.fratMeter + intensity * fratRate * dt, 0, 1);
+      // FRAT fills only from hits — proximity is safe harvest zone for skilled play
       const cx = this.activeFratHouse.x + (TILE * 1.5);
       const pull = intensity * 0.025;
       this.playerLane = U.lerp(this.playerLane, cx / TILE, pull);
@@ -617,7 +658,7 @@ class GameScene extends Phaser.Scene {
       gfx, kind,
       x: col * TILE, y: atY,
       col, dir: Math.random() < 0.5 ? -1 : 1,
-      moveTimer: 0,
+      moveTimer: 0, swayPhase: Math.random() * Math.PI * 2,
       chaseRadius: kind === 'sorority' ? TILE * 5 : (kind === 'ra' ? TILE * 3 : TILE * 2),
       hitRadius: TILE * 0.85,
       freezeRadius: kind === 'ra' ? TILE * 2.5 : 0,
@@ -694,6 +735,10 @@ class GameScene extends Phaser.Scene {
           if (this.frozen <= 0) this.warnText.setVisible(false);
         });
       }
+
+      // Idle sway — makes enemies feel alive
+      const sway = Math.round(Math.sin(this.time.now * 0.003 + e.swayPhase) * 1.5);
+      e.gfx.setY(Math.round(e.y) + sway);
     }
   }
 
@@ -726,11 +771,13 @@ class GameScene extends Phaser.Scene {
   }
 
   updateVenues(dt) {
+    let anyInside = false;
     for (const v of this.venues) {
       const inside =
         this.playerX > v.x && this.playerX < v.x + v.w &&
         this.playerY > v.y && this.playerY < v.y + v.h;
       if (inside) {
+        anyInside = true;
         v.visited = true;
         if (this.playerY < v.y + v.h * 0.4) v.reachedTop = true;
       } else if (v.visited && v.reachedTop && !v.consumed) {
@@ -742,6 +789,7 @@ class GameScene extends Phaser.Scene {
         v.visited = false;
       }
     }
+    this.insideVenue = anyInside;
   }
 
   collectShopItem(kind) {
@@ -762,12 +810,14 @@ class GameScene extends Phaser.Scene {
     FP.drawCollectible(gfx, type);
     gfx.setPosition(col * TILE, -TILE);
     gfx.setDepth(35);
-    this.collectibles.push({ gfx, x: col * TILE, y: -TILE, col, type });
+    this.collectibles.push({ gfx, x: col * TILE, y: -TILE, col, type, bobTime: 0 });
   }
 
   updateCollectibles(dt) {
     for (let i = this.collectibles.length - 1; i >= 0; i--) {
       const c = this.collectibles[i];
+      c.bobTime += dt;
+      c.gfx.setY(Math.round(c.y + Math.sin(c.bobTime * 0.004) * 4));
       const d = U.dist(this.playerX, this.playerY, c.x + TILE / 2, c.y + TILE / 2);
       if (d < TILE * 0.8) {
         const ptsMap = { zine: 150, coffee: 100, joint: 120, vinyl: 175, skateboard: 150 };
@@ -1184,7 +1234,7 @@ window.GameConfig = {
   parent: 'game',
   width: VIEW_W, height: VIEW_H,
   backgroundColor: 0xf0e9d6,
-  render: { pixelArt: false, antialias: true, roundPixels: true },
+  render: { pixelArt: true, antialias: false, roundPixels: true },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: GameScene,
 };
