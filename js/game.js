@@ -41,6 +41,8 @@ class GameScene extends Phaser.Scene {
     this.playerX = this.playerCol * TILE + TILE / 2;
     this.playerY = VIEW_H * 0.78;
     this.playerVy = 0;
+    this.playerVlane = 0;
+    this.joy = { active: false, id: -1, ox: 0, oy: 0, dx: 0, dy: 0 };
     this.dashCooldown = 0;
     this.dashing = 0;
     this.invuln = 0;
@@ -190,6 +192,44 @@ class GameScene extends Phaser.Scene {
       r: 'R',
     });
     this._lastKeys = {};
+    this._setupJoystick();
+  }
+
+  _setupJoystick() {
+    const JOY_MAX = 55;
+    this._joyRing = this.add.graphics().setScrollFactor(0).setDepth(200).setAlpha(0);
+    this._joyKnob = this.add.graphics().setScrollFactor(0).setDepth(201).setAlpha(0);
+    this._joyRing.lineStyle(3, 0xffffff, 0.65);
+    this._joyRing.strokeCircle(0, 0, JOY_MAX);
+    this._joyKnob.fillStyle(0xffffff, 0.2);
+    this._joyKnob.fillCircle(0, 0, 22);
+    this._joyKnob.lineStyle(2, 0xffffff, 0.45);
+    this._joyKnob.strokeCircle(0, 0, 22);
+
+    this.input.on('pointerdown', (p) => {
+      if (this.gameOver || this.paused || !this.gameStarted) return;
+      if (p.x < VIEW_W * 0.65 && !this.joy.active) {
+        this.joy = { active: true, id: p.id, ox: p.x, oy: p.y, dx: 0, dy: 0 };
+        this._joyRing.setPosition(p.x, p.y).setAlpha(1);
+        this._joyKnob.setPosition(p.x, p.y).setAlpha(1);
+      }
+    });
+    this.input.on('pointermove', (p) => {
+      if (p.id !== this.joy.id) return;
+      let dx = p.x - this.joy.ox, dy = p.y - this.joy.oy;
+      const mag = Math.hypot(dx, dy);
+      if (mag > JOY_MAX) { dx = dx / mag * JOY_MAX; dy = dy / mag * JOY_MAX; }
+      this.joy.dx = dx;
+      this.joy.dy = dy;
+      this._joyKnob.setPosition(this.joy.ox + dx, this.joy.oy + dy);
+    });
+    this.input.on('pointerup', (p) => {
+      if (p.id === this.joy.id) {
+        this.joy = { active: false, id: -1, ox: 0, oy: 0, dx: 0, dy: 0 };
+        this._joyRing.setAlpha(0);
+        this._joyKnob.setAlpha(0);
+      }
+    });
   }
 
   beginRun() {
@@ -278,38 +318,48 @@ class GameScene extends Phaser.Scene {
   }
 
   handleMovement(dt) {
-    const k = this.keys;
-    const leftDown = k.left.isDown || k.a.isDown || this.tiltLeft;
-    const rightDown = k.right.isDown || k.d.isDown || this.tiltRight;
-    const upDown = k.up.isDown || k.w.isDown;
-    const downDown = k.down.isDown || k.s.isDown;
-
-    const lJust = leftDown && !this._lastKeys.l;
-    const rJust = rightDown && !this._lastKeys.r;
-    const uJust = upDown && !this._lastKeys.u;
-    const dJust = downDown && !this._lastKeys.d;
-    this._lastKeys.l = leftDown; this._lastKeys.r = rightDown;
-    this._lastKeys.u = upDown; this._lastKeys.d = downDown;
-
     if (this.frozen > 0) return;
-    if (lJust && this.playerLane > 1) { this.playerLane--; FP.audio.step(); if (typeof Haptic !== 'undefined') Haptic.select(); }
-    else if (rJust && this.playerLane < COLS - 2) { this.playerLane++; FP.audio.step(); if (typeof Haptic !== 'undefined') Haptic.select(); }
-    this._holdL = leftDown ? (this._holdL || 0) + dt : 0;
-    this._holdR = rightDown ? (this._holdR || 0) + dt : 0;
-    if (this._holdL > 220 && this.playerLane > 1) {
-      this.playerLane--; this._holdL = 110; FP.audio.step(); if (typeof Haptic !== 'undefined') Haptic.select();
+
+    const k = this.keys;
+    const JOY_DEAD = 10;
+    const JOY_MAX = 55;
+
+    // Combine keyboard + tilt + joystick into -1..1 analog axes
+    let laneDir = 0, vertDir = 0;
+    if (k.left.isDown || k.a.isDown || this.tiltLeft) laneDir -= 1;
+    if (k.right.isDown || k.d.isDown || this.tiltRight) laneDir += 1;
+    if (k.up.isDown || k.w.isDown) vertDir -= 1;
+    if (k.down.isDown || k.s.isDown) vertDir += 1;
+    if (this.joy.active) {
+      if (Math.abs(this.joy.dx) > JOY_DEAD) laneDir = U.clamp(this.joy.dx / JOY_MAX, -1, 1);
+      if (Math.abs(this.joy.dy) > JOY_DEAD) vertDir = U.clamp(this.joy.dy / JOY_MAX, -1, 1);
     }
-    if (this._holdR > 220 && this.playerLane < COLS - 2) {
-      this.playerLane++; this._holdR = 110; FP.audio.step(); if (typeof Haptic !== 'undefined') Haptic.select();
+
+    // Lane velocity with skate momentum
+    const LANE_SPEED = 5.5; // lanes/sec at full deflection
+    if (Math.abs(laneDir) > 0.05) {
+      this.playerVlane = laneDir * LANE_SPEED;
+    } else {
+      // Exponential drag — wheel-rolling-to-stop feel
+      this.playerVlane *= Math.pow(0.82, dt / 16);
+      if (Math.abs(this.playerVlane) < 0.02) this.playerVlane = 0;
     }
+
+    const prevLaneRound = Math.round(this.playerLane);
+    this.playerLane = U.clamp(this.playerLane + this.playerVlane * (dt / 1000), 1, COLS - 2);
+    if (Math.round(this.playerLane) !== prevLaneRound) {
+      FP.audio.step();
+      if (typeof Haptic !== 'undefined') Haptic.select();
+    }
+
+    // Vertical: smooth analog movement (no tile-snapping)
+    const VERT_SPEED = 260; // px/sec
     const targetMin = TILE * 3, targetMax = VIEW_H - TILE * 1.5;
-    if (uJust) this.playerY = Math.max(targetMin, this.playerY - TILE);
-    if (dJust) this.playerY = Math.min(targetMax, this.playerY + TILE);
-    this._holdU = upDown ? (this._holdU || 0) + dt : 0;
-    this._holdD = downDown ? (this._holdD || 0) + dt : 0;
-    if (this._holdU > 220) { this.playerY = Math.max(targetMin, this.playerY - TILE); this._holdU = 110; }
-    if (this._holdD > 220) { this.playerY = Math.min(targetMax, this.playerY + TILE); this._holdD = 110; }
-    this.playerCol = Math.round(this.playerX / TILE);
+    if (Math.abs(vertDir) > 0.05) {
+      this.playerY = U.clamp(this.playerY + vertDir * VERT_SPEED * (dt / 1000), targetMin, targetMax);
+    }
+
+    this.playerCol = Math.round(this.playerLane);
   }
 
   // ==================== SCROLL & ROWS ====================
