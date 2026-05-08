@@ -365,3 +365,35 @@ kbd {
   .panel-h { grid-column: 1 / -1; }
   #game-wrapper, #game { width: min(100vw - 16px, 480px); height: auto; aspect-ratio: 480/720; }
 }
+
+/* ── Character creator ──────────────────────────────────── */
+.char-creator { display: flex; flex-direction: column; gap: 7px; }
+
+.cc-preview-wrap {
+  display: flex; justify-content: center; padding: 8px 0;
+  border: 2px solid var(--ink); background: var(--paper-2);
+}
+#char-preview { image-rendering: pixelated; }
+
+.cc-field { display: flex; flex-direction: column; gap: 3px; }
+.cc-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.55; }
+
+.cc-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.cc-chip {
+  padding: 2px 6px; font-size: 10px; font-weight: 700; cursor: pointer;
+  border: 2px solid var(--ink); background: var(--paper); font-family: inherit;
+}
+.cc-chip.active { background: var(--ink); color: var(--paper); }
+
+.cc-swatches { display: flex; gap: 4px; flex-wrap: wrap; }
+.cc-swatch {
+  width: 20px; height: 20px; border: 2px solid var(--ink);
+  cursor: pointer; border-radius: 2px;
+}
+.cc-swatch.active { outline: 3px solid var(--punk); outline-offset: 1px; }
+
+.cc-input {
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  border: 2px solid var(--ink); padding: 3px 6px;
+  background: var(--paper); width: 100%; box-sizing: border-box;
+}

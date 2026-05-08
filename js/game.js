@@ -43,11 +43,13 @@ class GameScene extends Phaser.Scene {
     this.playerVy = 0;
     this.playerVlane = 0;
     this.joy = { active: false, id: -1, ox: 0, oy: 0, dx: 0, dy: 0 };
+    this._swipe = { dx: 0, active: false };
     this.dashCooldown = 0;
     this.dashing = 0;
     this.invuln = 0;
     this.charIdx = 0;
     this.skinIdx = 1;
+    this.playerConfig = FP.loadPlayerConfig();
     this.walkFrame = 0; this.walkAccum = 0;
     this.powerup = null;
     this.activePower = null;
@@ -131,7 +133,7 @@ class GameScene extends Phaser.Scene {
       FP.drawSorority(this.player);
       return;
     }
-    FP.drawPunk(this.player, FP.CHARACTER_TYPES[this.charIdx], this.walkFrame, this.skinIdx, this.hasCigarette);
+    FP.drawPunk(this.player, this.playerConfig, this.walkFrame, null, this.hasCigarette);
   }
 
   createInGameUI() {
@@ -192,7 +194,12 @@ class GameScene extends Phaser.Scene {
       r: 'R',
     });
     this._lastKeys = {};
-    this._setupJoystick();
+    this._isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    if (this._isMobile) {
+      this._setupMobileControls();
+    } else {
+      this._setupJoystick();
+    }
   }
 
   _setupJoystick() {
@@ -230,6 +237,47 @@ class GameScene extends Phaser.Scene {
         this._joyKnob.setAlpha(0);
       }
     });
+  }
+
+  _setupMobileControls() {
+    let touchStart = null;
+    const SWIPE_MIN = 30, TAP_MAX_MS = 250, TAP_MAX_PX = 20;
+
+    this.input.on('pointerdown', (p) => {
+      if (this.gameOver || this.paused || !this.gameStarted) return;
+      touchStart = { x: p.x, y: p.y, t: this.time.now };
+    });
+
+    this.input.on('pointerup', (p) => {
+      if (!touchStart) return;
+      const dx = p.x - touchStart.x, dy = p.y - touchStart.y;
+      const dt = this.time.now - touchStart.t;
+      const dist = Math.hypot(dx, dy);
+      touchStart = null;
+
+      if (dist < TAP_MAX_PX && dt < TAP_MAX_MS) {
+        if (!this.tryUsePowerup()) this.tryDash();
+        return;
+      }
+      if (dist < SWIPE_MIN) return;
+
+      const absX = Math.abs(dx), absY = Math.abs(dy);
+      if (absY > absX && dy < 0) {
+        this.kickAccelerate();
+      } else if (absX > absY) {
+        this._swipe = { dx: dx > 0 ? 1 : -1, active: true };
+      } else if (absY > absX && dy > 0) {
+        this.SCROLL_SPEED = Math.max(65, this.SCROLL_SPEED * 0.65);
+      }
+    });
+  }
+
+  kickAccelerate() {
+    this.SCROLL_SPEED = Math.min(220, this.SCROLL_SPEED + 45);
+    this.particles.burst(this.playerX, this.playerY + 16, {
+      count: 10, colors: [0xffd23f, 0xff7a00, 0xffffff], size: 3, life: 380,
+    });
+    FP.audio.step();
   }
 
   beginRun() {
@@ -333,6 +381,11 @@ class GameScene extends Phaser.Scene {
     if (this.joy.active) {
       if (Math.abs(this.joy.dx) > JOY_DEAD) laneDir = U.clamp(this.joy.dx / JOY_MAX, -1, 1);
       if (Math.abs(this.joy.dy) > JOY_DEAD) vertDir = U.clamp(this.joy.dy / JOY_MAX, -1, 1);
+    }
+    // Consume one-shot mobile swipe
+    if (this._swipe.active) {
+      this.playerVlane = this._swipe.dx * 9;
+      this._swipe.active = false;
     }
 
     // Lane velocity with skate momentum
@@ -701,7 +754,7 @@ class GameScene extends Phaser.Scene {
 
   spawnCollectible() {
     const col = 2 + Math.floor(Math.random() * (COLS - 4));
-    const types = ['zine', 'zine', 'zine', 'coffee', 'vinyl', 'skateboard'];
+    const types = ['zine', 'zine', 'joint', 'joint', 'vinyl', 'skateboard'];
     const type = U.pick(types);
     const gfx = this.add.graphics();
     FP.drawCollectible(gfx, type);
@@ -715,7 +768,7 @@ class GameScene extends Phaser.Scene {
       const c = this.collectibles[i];
       const d = U.dist(this.playerX, this.playerY, c.x + TILE / 2, c.y + TILE / 2);
       if (d < TILE * 0.8) {
-        const ptsMap = { zine: 150, coffee: 100, vinyl: 175, skateboard: 150 };
+        const ptsMap = { zine: 150, coffee: 100, joint: 120, vinyl: 175, skateboard: 150 };
         const pts = (ptsMap[c.type] || 100) * this.combo;
         this.addScore(pts, '+' + pts, '#ff2d6f');
         this.punkMeter = U.clamp(this.punkMeter + 0.08, 0, 1);

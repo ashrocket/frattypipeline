@@ -301,25 +301,30 @@ FP.drawVenue = function(g, kind, w = TILE * 3, h = TILE * 4) {
 // ============ PLAYER ============
 FP.drawPunk = function(g, charType, walkFrame, skinIdx, hasCig) {
   const s = TILE;
-  const skin = FP.COLORS.skin[skinIdx];
+  // Accept flat PLAYER_CONFIG or legacy CHARACTER_TYPES entry
+  const isConfig = charType && typeof charType.hairColor !== 'undefined';
+  const hair       = isConfig ? charType.hairColor  : charType.hair;
+  const shirtColor = isConfig ? charType.shirtColor : (charType.shirt || 0x1a1a1a);
+  const pantsColor = isConfig ? charType.pantsColor : 0x2a2a4a;
+  const style      = isConfig ? (charType.hairStyle || 'punk') : charType.style;
+  const skin       = isConfig ? charType.skinTone   : (FP.COLORS.skin[skinIdx] || FP.COLORS.skin[0]);
   g.fillStyle(FP.COLORS.ink, 0.25);
   g.fillEllipse(s * 0.5, s * 0.97, s * 0.55, s * 0.1);
-  const hair = charType.hair;
   g.fillStyle(hair);
-  if (charType.style === 'punk') {
+  if (style === 'punk') {
     for (let i = 0; i < 6; i++) {
       g.fillTriangle(s * (0.32 + i * 0.06), s * 0.05,
                      s * (0.34 + i * 0.06), s * 0.2,
                      s * (0.36 + i * 0.06), s * 0.05);
     }
-  } else if (charType.style === 'goth') {
+  } else if (style === 'goth') {
     g.fillRect(s * 0.18, s * 0.08, s * 0.64, s * 0.22);
     g.fillRect(s * 0.12, s * 0.18, s * 0.18, s * 0.32);
-  } else if (charType.style === 'skater') {
+  } else if (style === 'skater') {
     g.fillRect(s * 0.2, s * 0.08, s * 0.6, s * 0.2);
     g.fillStyle(0xff7a00);
     g.fillRect(s * 0.2, s * 0.18, s * 0.6, 4);
-  } else if (charType.style === 'raver') {
+  } else if (style === 'raver') {
     g.fillRect(s * 0.22, s * 0.06, s * 0.56, s * 0.22);
     g.fillStyle(0x6effff);
     g.fillRect(s * 0.22, s * 0.06, 4, s * 0.22);
@@ -335,18 +340,18 @@ FP.drawPunk = function(g, charType, walkFrame, skinIdx, hasCig) {
   g.fillRect(s * 0.3, s * 0.3, s * 0.16, s * 0.06);
   g.fillRect(s * 0.54, s * 0.3, s * 0.16, s * 0.06);
   g.fillRect(s * 0.46, s * 0.32, s * 0.08, 2);
-  g.fillStyle(charType.shirt || 0x1a1a1a);
+  g.fillStyle(shirtColor);
   g.fillRect(s * 0.2, s * 0.48, s * 0.6, s * 0.28);
   g.lineStyle(1.5, FP.COLORS.ink);
   g.strokeRect(s * 0.2, s * 0.48, s * 0.6, s * 0.28);
-  g.fillStyle(charType.logo || 0xff2d6f);
+  g.fillStyle(isConfig ? 0xff2d6f : (charType.logo || 0xff2d6f));
   g.fillRect(s * 0.42, s * 0.56, s * 0.16, s * 0.12);
   g.fillStyle(skin);
   g.fillRect(s * 0.1, s * 0.5, s * 0.12, s * 0.22);
   g.fillRect(s * 0.78, s * 0.5, s * 0.12, s * 0.22);
   const lOff = walkFrame === 1 ? -2 : walkFrame === 3 ? 2 : 0;
   const rOff = walkFrame === 1 ? 2 : walkFrame === 3 ? -2 : 0;
-  g.fillStyle(0x2a2a4a);
+  g.fillStyle(pantsColor);
   g.fillRect(s * 0.26, s * 0.76 + lOff, s * 0.2, s * 0.16);
   g.fillRect(s * 0.54, s * 0.76 + rOff, s * 0.2, s * 0.16);
   g.fillStyle(FP.COLORS.ink);
@@ -493,57 +498,69 @@ FP.drawRA = function(g) {
 // ============ COLLECTIBLES ============
 FP.drawCollectible = function(g, type) {
   const s = TILE;
-  if (type === 'coffee') {
-    // Warm glow halo
-    g.fillStyle(0xff7a00, 0.18);
+  if (type === 'coffee' || type === 'joint') {
+    // Orange glow
+    g.fillStyle(0xff7a00, 0.22);
     g.fillCircle(s * 0.5, s * 0.52, s * 0.42);
-    // Cup body
-    g.fillStyle(FP.COLORS.ink);
-    g.fillRect(s * 0.24, s * 0.3, s * 0.52, s * 0.52);
-    // Sleeve band
-    g.fillStyle(0xff7a00);
-    g.fillRect(s * 0.24, s * 0.3, s * 0.52, s * 0.13);
-    // Inner cup
+    // Joint body — white rolled paper (tall, centred)
     g.fillStyle(0xfff5e0);
-    g.fillRect(s * 0.28, s * 0.43, s * 0.44, s * 0.3);
-    // Coffee liquid
-    g.fillStyle(0x5a2e10);
-    g.fillRect(s * 0.28, s * 0.54, s * 0.44, s * 0.16);
-    g.lineStyle(2.5, FP.COLORS.ink);
-    g.strokeRect(s * 0.24, s * 0.3, s * 0.52, s * 0.52);
-    // Steam lines
-    g.lineStyle(2, 0xaaaaaa, 0.85);
-    g.beginPath(); g.moveTo(s * 0.36, s * 0.26); g.lineTo(s * 0.38, s * 0.1); g.strokePath();
-    g.beginPath(); g.moveTo(s * 0.5, s * 0.24);  g.lineTo(s * 0.5, s * 0.06); g.strokePath();
-    g.beginPath(); g.moveTo(s * 0.64, s * 0.26); g.lineTo(s * 0.62, s * 0.1); g.strokePath();
+    g.fillRect(s * 0.38, s * 0.2, s * 0.24, s * 0.54);
+    g.lineStyle(1.5, FP.COLORS.ink);
+    g.strokeRect(s * 0.38, s * 0.2, s * 0.24, s * 0.54);
+    // Paper texture seam
+    g.lineStyle(1, FP.COLORS.ink, 0.25);
+    g.beginPath(); g.moveTo(s * 0.5, s * 0.2); g.lineTo(s * 0.5, s * 0.74); g.strokePath();
+    // Twisted tip (top)
+    g.fillStyle(0xfff5e0);
+    g.fillTriangle(s * 0.4, s * 0.2, s * 0.5, s * 0.08, s * 0.6, s * 0.2);
+    g.lineStyle(1, FP.COLORS.ink);
+    g.strokeTriangle(s * 0.4, s * 0.2, s * 0.5, s * 0.08, s * 0.6, s * 0.2);
+    // Ember at lit end (bottom)
+    g.fillStyle(0xff4d2a);
+    g.fillCircle(s * 0.5, s * 0.79, 6);
+    g.fillStyle(0xff9900);
+    g.fillCircle(s * 0.5, s * 0.79, 3.5);
+    g.fillStyle(0xffd23f);
+    g.fillCircle(s * 0.5, s * 0.79, 1.5);
+    // Smoke wisps drifting up-right
+    g.fillStyle(0xcccccc, 0.7);
+    g.fillCircle(s * 0.56, s * 0.67, 2.5);
+    g.fillStyle(0xbbbbbb, 0.5);
+    g.fillCircle(s * 0.61, s * 0.57, 2);
+    g.fillStyle(0xaaaaaa, 0.35);
+    g.fillCircle(s * 0.66, s * 0.47, 1.5);
   } else if (type === 'vinyl') {
-    // Punk pink glow
-    g.fillStyle(0xff2d6f, 0.22);
-    g.fillCircle(s * 0.5, s * 0.5, s * 0.44);
-    // Record
-    g.fillStyle(FP.COLORS.ink);
-    g.fillCircle(s * 0.5, s * 0.5, s * 0.37);
-    // Groove rings
-    g.lineStyle(1, 0x2a2a2a, 0.7);
-    g.strokeCircle(s * 0.5, s * 0.5, s * 0.29);
-    g.strokeCircle(s * 0.5, s * 0.5, s * 0.22);
-    // Label
+    // Pink glow halo
+    g.fillStyle(0xff2d6f, 0.25);
+    g.fillCircle(s * 0.5, s * 0.5, s * 0.46);
+    // Album sleeve (off-white cardboard)
+    g.fillStyle(0xfff5e0);
+    g.fillRect(s * 0.1, s * 0.1, s * 0.8, s * 0.8);
+    g.lineStyle(2, FP.COLORS.ink);
+    g.strokeRect(s * 0.1, s * 0.1, s * 0.8, s * 0.8);
+    // Record peeking out (offset so you can see sleeve edge)
+    g.fillStyle(0x111111);
+    g.fillCircle(s * 0.54, s * 0.54, s * 0.3);
+    // Groove rings — wider spacing, more visible
+    g.lineStyle(1.5, 0x3a3a3a, 0.9);
+    g.strokeCircle(s * 0.54, s * 0.54, s * 0.24);
+    g.strokeCircle(s * 0.54, s * 0.54, s * 0.17);
+    // Bold pink centre label
     g.fillStyle(0xff2d6f);
-    g.fillCircle(s * 0.5, s * 0.5, s * 0.14);
-    // Center hole
+    g.fillCircle(s * 0.54, s * 0.54, s * 0.1);
     g.fillStyle(FP.COLORS.ink);
-    g.fillCircle(s * 0.5, s * 0.5, s * 0.04);
-    // Shine
-    g.fillStyle(0xffffff, 0.18);
-    g.fillCircle(s * 0.38, s * 0.38, s * 0.08);
+    g.fillCircle(s * 0.54, s * 0.54, s * 0.03);
+    // Sleeve text lines (bottom-left corner)
+    g.fillStyle(FP.COLORS.ink);
+    g.fillRect(s * 0.14, s * 0.74, s * 0.36, 2);
+    g.fillRect(s * 0.14, s * 0.79, s * 0.24, 2);
   } else if (type === 'skateboard') {
-    // Cyan glow
     g.fillStyle(0x6effff, 0.22);
     g.fillCircle(s * 0.5, s * 0.52, s * 0.42);
     // Deck
     g.fillStyle(0xc89870);
     g.fillRect(s * 0.08, s * 0.38, s * 0.84, s * 0.22);
-    // Grip tape graphic
+    // Grip tape
     g.fillStyle(0xff2d6f);
     g.fillRect(s * 0.2, s * 0.4, s * 0.6, s * 0.12);
     g.fillStyle(FP.COLORS.paper);
@@ -555,7 +572,7 @@ FP.drawCollectible = function(g, type) {
     g.fillStyle(0x999999);
     g.fillRect(s * 0.18, s * 0.58, s * 0.22, 4);
     g.fillRect(s * 0.6, s * 0.58, s * 0.22, 4);
-    // Wheels (4)
+    // Wheels
     [0.22, 0.38, 0.62, 0.78].forEach(wx => {
       g.fillStyle(0xf0e9d6);
       g.fillCircle(s * wx, s * 0.67, 5);
@@ -566,34 +583,39 @@ FP.drawCollectible = function(g, type) {
     g.strokeRect(s * 0.08, s * 0.38, s * 0.84, s * 0.22);
   } else { // zine
     // Gold glow
-    g.fillStyle(0xffd23f, 0.22);
-    g.fillCircle(s * 0.5, s * 0.5, s * 0.42);
-    // Zine body
-    g.fillStyle(FP.COLORS.paper);
-    g.fillRect(s * 0.16, s * 0.1, s * 0.68, s * 0.8);
-    // Cover header
+    g.fillStyle(0xffd23f, 0.28);
+    g.fillCircle(s * 0.5, s * 0.5, s * 0.44);
+    // Newsprint body
+    g.fillStyle(0xf0e9d6);
+    g.fillRect(s * 0.12, s * 0.08, s * 0.76, s * 0.84);
+    g.lineStyle(2, FP.COLORS.ink);
+    g.strokeRect(s * 0.12, s * 0.08, s * 0.76, s * 0.84);
+    // Bold dark cover band (top 35%)
+    g.fillStyle(FP.COLORS.ink);
+    g.fillRect(s * 0.12, s * 0.08, s * 0.76, s * 0.3);
+    // White title bars on cover
+    g.fillStyle(0xffffff);
+    g.fillRect(s * 0.18, s * 0.14, s * 0.64, s * 0.08);
+    g.fillRect(s * 0.18, s * 0.25, s * 0.44, s * 0.06);
+    // Hot-pink accent stripe
     g.fillStyle(0xff2d6f);
-    g.fillRect(s * 0.16, s * 0.1, s * 0.68, s * 0.24);
-    // Title lines on cover
-    g.fillStyle(FP.COLORS.paper);
-    g.fillRect(s * 0.22, s * 0.16, s * 0.56, 4);
-    g.fillRect(s * 0.22, s * 0.24, s * 0.38, 3);
+    g.fillRect(s * 0.12, s * 0.38, s * 0.76, s * 0.05);
     // Body text lines
     g.fillStyle(FP.COLORS.ink);
-    for (let i = 0; i < 4; i++) g.fillRect(s * 0.22, s * 0.4 + i * s * 0.1, s * 0.56, 2);
-    g.fillRect(s * 0.22, s * 0.78, s * 0.4, 2);
+    for (let i = 0; i < 3; i++) g.fillRect(s * 0.18, s * 0.47 + i * s * 0.1, s * 0.6, 2.5);
+    g.fillRect(s * 0.18, s * 0.77, s * 0.38, 2.5);
     // Staple marks
-    g.fillStyle(0x888888);
-    g.fillRect(s * 0.16, s * 0.22, 3, 4);
-    g.fillRect(s * 0.16, s * 0.62, 3, 4);
-    // Punk sticker circle
+    g.fillStyle(0x999999);
+    g.fillRect(s * 0.12, s * 0.22, 4, 5);
+    g.fillRect(s * 0.12, s * 0.62, 4, 5);
+    // Orange punk sticker
     g.fillStyle(0xff7a00);
-    g.fillCircle(s * 0.72, s * 0.76, 6);
+    g.fillCircle(s * 0.74, s * 0.78, 7);
     g.lineStyle(1.5, FP.COLORS.ink);
-    g.strokeCircle(s * 0.72, s * 0.76, 6);
-    // Border
-    g.lineStyle(2.5, FP.COLORS.ink);
-    g.strokeRect(s * 0.16, s * 0.1, s * 0.68, s * 0.8);
+    g.strokeCircle(s * 0.74, s * 0.78, 7);
+    g.lineStyle(2, FP.COLORS.ink);
+    g.beginPath(); g.moveTo(s*0.7, s*0.74); g.lineTo(s*0.78, s*0.82); g.strokePath();
+    g.beginPath(); g.moveTo(s*0.78, s*0.74); g.lineTo(s*0.7, s*0.82); g.strokePath();
   }
 };
 
@@ -654,3 +676,55 @@ FP.drawFire = function(g, frame, w) {
     }
   }
 };
+
+// ============ PLAYER CONFIG (persisted) ============
+FP.HAIR_COLORS = [
+  { name: 'Pink',   hex: '#ff2d6f', val: 0xff2d6f },
+  { name: 'Black',  hex: '#111111', val: 0x111111 },
+  { name: 'Bleach', hex: '#f5e642', val: 0xf5e642 },
+  { name: 'Blue',   hex: '#4a8ade', val: 0x4a8ade },
+  { name: 'Green',  hex: '#2adf6f', val: 0x2adf6f },
+  { name: 'Red',    hex: '#cc2200', val: 0xcc2200 },
+  { name: 'Purple', hex: '#9922ff', val: 0x9922ff },
+];
+FP.SHIRT_COLORS = [
+  { name: 'Black',  hex: '#111111', val: 0x111111 },
+  { name: 'Pink',   hex: '#ff2d6f', val: 0xff2d6f },
+  { name: 'Orange', hex: '#ff7a00', val: 0xff7a00 },
+  { name: 'Navy',   hex: '#1a3a8c', val: 0x1a3a8c },
+  { name: 'White',  hex: '#f0e9d6', val: 0xf0e9d6 },
+  { name: 'Purple', hex: '#5a2aaa', val: 0x5a2aaa },
+];
+FP.PANTS_COLORS = [
+  { name: 'Black', hex: '#2a2a4a', val: 0x2a2a4a },
+  { name: 'Grey',  hex: '#7a7a8a', val: 0x7a7a8a },
+  { name: 'Plaid', hex: '#2a4a2a', val: 0x2a4a2a },
+  { name: 'Khaki', hex: '#b09060', val: 0xb09060 },
+];
+FP.SKIN_TONES = [
+  { name: 'S1', hex: '#f5c89a', val: 0xf5c89a },
+  { name: 'S2', hex: '#d4925a', val: 0xd4925a },
+  { name: 'S3', hex: '#a0623a', val: 0xa0623a },
+  { name: 'S4', hex: '#6a3a1a', val: 0x6a3a1a },
+  { name: 'S5', hex: '#3a1e0a', val: 0x3a1e0a },
+];
+FP.HAIR_STYLES = ['punk', 'goth', 'skater', 'raver', 'grunge'];
+
+FP.DEFAULT_PLAYER_CONFIG = {
+  name: 'Unnamed', hairStyle: 'punk', hairColor: 0xff2d6f,
+  skinTone: 0xf5c89a, shirtColor: 0x111111, pantsColor: 0x2a2a4a,
+};
+
+FP.loadPlayerConfig = function() {
+  try {
+    const raw = localStorage.getItem('fratty-pipeline:player');
+    if (raw) return Object.assign({}, FP.DEFAULT_PLAYER_CONFIG, JSON.parse(raw));
+  } catch (e) {}
+  return Object.assign({}, FP.DEFAULT_PLAYER_CONFIG);
+};
+
+FP.savePlayerConfig = function(cfg) {
+  localStorage.setItem('fratty-pipeline:player', JSON.stringify(cfg));
+};
+
+FP.PLAYER_CONFIG = FP.loadPlayerConfig();

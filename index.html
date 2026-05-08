@@ -87,7 +87,7 @@
               <div class="legend-hd">GRAB THESE</div>
               <div class="legend-item"><span class="ldot" style="background:#ff2d6f"></span>Vinyl — +PUNK pts</div>
               <div class="legend-item"><span class="ldot" style="background:#ffd23f"></span>Zine — +PUNK pts</div>
-              <div class="legend-item"><span class="ldot" style="background:#ff7a00"></span>Coffee — +PUNK pts</div>
+              <div class="legend-item"><span class="ldot" style="background:#ff7a00"></span>Joint — +PUNK pts</div>
               <div class="legend-item"><span class="ldot" style="background:#6effff"></span>Skateboard — +speed</div>
               <div class="legend-hd" style="margin-top:6px">ENTER VENUES</div>
               <div class="legend-item"><span class="ldot" style="background:#3a8559"></span>Coffee shop — big +PUNK</div>
@@ -119,10 +119,18 @@
             <span style="color:#ff7a00">🔥 BURNED</span>
           </div>
 
-          <ul class="how">
-            <li><kbd>WASD</kbd>/<kbd>ARROWS</kbd> move · <kbd>SPACE</kbd> dash · <kbd>F</kbd> burn</li>
-            <li><kbd>Q</kbd> use power-up · <kbd>P</kbd> pause</li>
+          <ul class="how" id="how-kb">
+            <li><kbd>WASD</kbd>/<kbd>ARROWS</kbd> move · <kbd>SPACE</kbd> dash · <kbd>F</kbd> burn · <kbd>Q</kbd> power-up</li>
           </ul>
+          <ul class="how hidden" id="how-mobile">
+            <li>Tilt to steer · Swipe ↑ to kick · Swipe ← → to dodge · Tap to use power-up</li>
+          </ul>
+          <script>
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+              document.getElementById('how-kb').classList.add('hidden');
+              document.getElementById('how-mobile').classList.remove('hidden');
+            }
+          </script>
           <button id="start-btn" class="btn primary big">START RUN</button>
         </div>
       </div>
@@ -134,7 +142,35 @@
         <div class="pup-empty">empty</div>
       </div>
       <div class="panel-h" style="margin-top:14px">CHARACTER</div>
-      <div id="char-strip" class="char-strip"></div>
+      <div id="char-creator" class="char-creator">
+        <div class="cc-preview-wrap">
+          <canvas id="char-preview" width="80" height="120"></canvas>
+        </div>
+        <div class="cc-field">
+          <label class="cc-label">Name</label>
+          <input id="cc-name" class="cc-input" type="text" maxlength="12" placeholder="your name" />
+        </div>
+        <div class="cc-field">
+          <label class="cc-label">Hair Style</label>
+          <div id="cc-hairstyle" class="cc-row"></div>
+        </div>
+        <div class="cc-field">
+          <label class="cc-label">Hair Color</label>
+          <div id="cc-haircolor" class="cc-swatches"></div>
+        </div>
+        <div class="cc-field">
+          <label class="cc-label">Skin Tone</label>
+          <div id="cc-skin" class="cc-swatches"></div>
+        </div>
+        <div class="cc-field">
+          <label class="cc-label">Shirt</label>
+          <div id="cc-shirt" class="cc-swatches"></div>
+        </div>
+        <div class="cc-field">
+          <label class="cc-label">Pants</label>
+          <div id="cc-pants" class="cc-swatches"></div>
+        </div>
+      </div>
       <div class="panel-h" style="margin-top:14px">FRAT ROW</div>
       <div id="row-list" class="row-list"></div>
     </aside>
