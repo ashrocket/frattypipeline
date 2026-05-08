@@ -293,6 +293,16 @@ kbd {
   border-left: 3px solid var(--punk);
 }
 .narrative strong { color: var(--burn); font-family: 'Archivo Black', sans-serif; }
+.legend-details {
+  margin: 6px 0 10px; text-align: left;
+}
+.legend-details summary {
+  font-family: 'VT323', monospace; font-size: 14px; letter-spacing: .06em;
+  color: var(--punk); cursor: pointer; user-select: none;
+  list-style: none; padding: 3px 0;
+}
+.legend-details summary::-webkit-details-marker { display: none; }
+.legend-details[open] summary { margin-bottom: 8px; }
 .legend-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
   margin-bottom: 10px; text-align: left;

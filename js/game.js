@@ -63,7 +63,7 @@ class GameScene extends Phaser.Scene {
     this.fires = [];
     this.taggedFrat = null;
     this.spawnTimers = {
-      frat: 1500, venue: 800, enemy: 2400, crate: 8000, item: 1200,
+      frat: 1500, venue: 800, enemy: 5000, crate: 8000, item: 1200,
     };
     this.VISIBLE_ROWS = Math.ceil(VIEW_H / TILE) + 4;
     this.rows = [];
@@ -241,7 +241,7 @@ class GameScene extends Phaser.Scene {
 
   _setupMobileControls() {
     let touchStart = null;
-    const SWIPE_MIN = 30, TAP_MAX_MS = 250, TAP_MAX_PX = 20;
+    const SWIPE_MIN = 45, TAP_MAX_MS = 250, TAP_MAX_PX = 20;
 
     this.input.on('pointerdown', (p) => {
       if (this.gameOver || this.paused || !this.gameStarted) return;
@@ -273,11 +273,13 @@ class GameScene extends Phaser.Scene {
   }
 
   kickAccelerate() {
-    this.SCROLL_SPEED = Math.min(220, this.SCROLL_SPEED + 45);
+    this.SCROLL_SPEED = Math.min(220, this.SCROLL_SPEED + 55);
     this.particles.burst(this.playerX, this.playerY + 16, {
-      count: 10, colors: [0xffd23f, 0xff7a00, 0xffffff], size: 3, life: 380,
+      count: 18, colors: [0xffd23f, 0xff7a00, 0xffffff, 0xff2d6f], size: 4, life: 480,
     });
+    this.cameras.main.shake(90, 0.014);
     FP.audio.step();
+    if (typeof Haptic !== 'undefined') Haptic.heavy();
   }
 
   beginRun() {
@@ -321,7 +323,7 @@ class GameScene extends Phaser.Scene {
     }
 
     let scrollSpeed = this.SCROLL_SPEED;
-    if (this.fratMeter > 0.6) scrollSpeed *= 0.7;
+    if (this.fratMeter > 0.6) scrollSpeed *= 0.88;
     if (this.activePower?.type === 'skateboard') scrollSpeed *= 1.7;
     if (this.frozen > 0) scrollSpeed *= 0.2;
     this.SCROLL_SPEED = Math.min(220, this.SCROLL_SPEED + this.scrollAccel * dt);
@@ -1146,7 +1148,7 @@ class GameScene extends Phaser.Scene {
     }
     if (this.activePower) {
       const pu = FP.POWERUPS[this.activePower.type];
-      this.powerActiveText.setText(pu.name + ' ' + (this.activePower.until/1000).toFixed(1) + 's');
+      this.powerActiveText.setText(pu.name + ' ' + Math.ceil(this.activePower.until / 500) * 0.5 + 's');
     } else {
       this.powerActiveText.setText('');
     }

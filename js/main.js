@@ -104,7 +104,7 @@ window.addEventListener('load', () => {
   setTimeout(resize, 100);
 
   // ─── Tilt steering ──────────────────────────────────────────────────────────
-  const TILT_DEAD = 14;
+  const TILT_DEAD = 18;
   let _tiltLeft = false, _tiltRight = false;
   Motion.onTilt((gamma) => {
     const newLeft = gamma < -TILT_DEAD;
