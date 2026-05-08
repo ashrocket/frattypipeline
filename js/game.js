@@ -34,8 +34,8 @@ class GameScene extends Phaser.Scene {
     this.combo = 1;
     this.comboTimer = 0;
     this.COMBO_TIMEOUT = 2400;
-    this.SCROLL_SPEED = 65;
-    this.scrollAccel = 0.0008;
+    this.SCROLL_SPEED = 44;
+    this.scrollAccel = 0.0005;
     this.playerCol = Math.floor(COLS / 2);
     this.playerLane = this.playerCol;
     this.playerX = this.playerCol * TILE + TILE / 2;
@@ -277,13 +277,13 @@ class GameScene extends Phaser.Scene {
           this._swipe = { dx: swipeDir, active: true };
         }
       } else if (absY > absX && dy > 0) {
-        this.SCROLL_SPEED = Math.max(65, this.SCROLL_SPEED * 0.65);
+        this.SCROLL_SPEED = Math.max(44, this.SCROLL_SPEED * 0.65);
       }
     });
   }
 
   kickAccelerate() {
-    this.SCROLL_SPEED = Math.min(220, this.SCROLL_SPEED + 55);
+    this.SCROLL_SPEED = Math.min(160, this.SCROLL_SPEED + 55);
     this.particles.burst(this.playerX, this.playerY + 16, {
       count: 18, colors: [0xffd23f, 0xff7a00, 0xffffff, 0xff2d6f], size: 4, life: 480,
     });
@@ -353,7 +353,7 @@ class GameScene extends Phaser.Scene {
     if (this.activePower?.type === 'skateboard') scrollSpeed *= 1.7;
     if (this.frozen > 0) scrollSpeed *= 0.2;
     if (this.insideVenue) scrollSpeed *= 0.32;
-    this.SCROLL_SPEED = Math.min(220, this.SCROLL_SPEED + this.scrollAccel * dt);
+    this.SCROLL_SPEED = Math.min(160, this.SCROLL_SPEED + this.scrollAccel * dt);
     const dy = scrollSpeed * (dt / 1000);
     this.scrollWorld(dy);
 
