@@ -1,0 +1,121 @@
+<h2>How should the game be structured?</h2>
+<p class="subtitle">Three approaches to side-scrolling — each changes how skating, fighting, and frat-burning connect</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#1a1a2e;padding:12px;font-family:monospace;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <!-- sky -->
+        <div style="height:28px;background:linear-gradient(#2a1a4a,#4a1a6a);border-radius:4px 4px 0 0;display:flex;align-items:center;padding:0 8px;">
+          <span style="color:#ffd23f;font-size:9px;">★ LEVEL 1: SKATE TO THE FRAT ★ ♥♥♥</span>
+        </div>
+        <!-- platforms -->
+        <div style="height:60px;background:#1a1a2e;position:relative;overflow:hidden;">
+          <div style="position:absolute;bottom:0;left:0;right:0;height:12px;background:#5a3820;"></div>
+          <!-- rooftops -->
+          <div style="position:absolute;bottom:22px;left:8px;width:30px;height:10px;background:#1a3a8c;border-radius:2px 2px 0 0;"></div>
+          <div style="position:absolute;bottom:22px;left:50px;width:45px;height:14px;background:#6b4423;border-radius:2px 2px 0 0;"></div>
+          <div style="position:absolute;bottom:22px;left:108px;width:38px;height:18px;background:#1a6e6e;border-radius:2px 2px 0 0;"></div>
+          <!-- player skater -->
+          <div style="position:absolute;bottom:12px;left:30px;width:8px;height:14px;background:#ffd23f;border-radius:2px;"></div>
+          <!-- enemy frat bro -->
+          <div style="position:absolute;bottom:12px;left:90px;width:8px;height:14px;background:#ff7a9e;border-radius:2px;"></div>
+          <!-- frat house at end -->
+          <div style="position:absolute;bottom:0;right:4px;width:36px;height:38px;background:#1a3a8c;border-radius:2px 2px 0 0;display:flex;align-items:center;justify-content:center;">
+            <span style="color:#ffd23f;font-size:7px;">ΔΨΩ</span>
+          </div>
+        </div>
+        <div style="background:#0a0a1a;padding:4px 8px;border-radius:0 0 4px 4px;">
+          <span style="color:#9ab485;font-size:8px;">→ skate right, fight frat bros → reach frat → BOSS FIGHT → burn it 🔥</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Mario Mode</h3>
+      <p>Each frat is a <strong>level</strong>. Skate left-to-right, grind rails, fight frat bros along the way. Reach the frat house, beat the boss (frat president), burn it down. 3 levels = rescue. Clean, familiar structure.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Clear progression</li><li>Easy to pace difficulty</li><li>Classic feel</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less replayable</li><li>Finite content</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#1a1a2e;padding:12px;font-family:monospace;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div style="height:28px;background:linear-gradient(#1a2a0a,#2a4a1a);border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:space-between;padding:0 8px;">
+          <span style="color:#ffd23f;font-size:9px;">♥♥♥ PUNK METER ████░░</span>
+          <span style="color:#ff7a9e;font-size:9px;">FRAT METER ███░░░</span>
+        </div>
+        <div style="height:60px;background:#1a1a2e;position:relative;overflow:hidden;">
+          <!-- endless street -->
+          <div style="position:absolute;bottom:0;left:0;right:0;height:12px;background:#5a3820;"></div>
+          <!-- buildings scrolling -->
+          <div style="position:absolute;bottom:12px;left:0px;width:35px;height:22px;background:#1a3a8c;border-radius:2px 2px 0 0;opacity:0.5;"></div>
+          <div style="position:absolute;bottom:12px;left:40px;width:25px;height:16px;background:#6b4423;border-radius:2px 2px 0 0;"></div>
+          <div style="position:absolute;bottom:12px;left:75px;width:40px;height:30px;background:#1a3a8c;border-radius:2px 2px 0 0;display:flex;align-items:center;justify-content:center;"><span style="color:#ffd23f;font-size:7px;">ΑΘΣ</span></div>
+          <div style="position:absolute;bottom:12px;left:122px;width:30px;height:18px;background:#2a1845;border-radius:2px 2px 0 0;opacity:0.7;"></div>
+          <!-- player -->
+          <div style="position:absolute;bottom:12px;left:22px;width:8px;height:14px;background:#ffd23f;border-radius:2px;"></div>
+          <!-- frat spawns -->
+          <div style="position:absolute;top:2px;left:75px;width:40px;height:8px;background:#ff7a9e22;border:1px solid #ff7a9e;border-radius:2px;display:flex;align-items:center;justify-content:center;"><span style="color:#ff7a9e;font-size:6px;">FRAT SPAWN</span></div>
+        </div>
+        <div style="background:#0a0a1a;padding:4px 8px;border-radius:0 0 4px 4px;">
+          <span style="color:#9ab485;font-size:8px;">→ endless street, frat houses procedurally spawn → grind up, toss molotov 🔥</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Endless Grind</h3>
+      <p>Infinite procedurally-generated street. Frat houses appear randomly. Skate, fight, find a molotov, grind up to the frat roof, torch it. Counter tracks how many you've burned. More roguelike — each run is different.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Highly replayable</li><li>Familiar to current game</li><li>Easy to add content</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less structured narrative</li><li>Harder to pace</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#1a1a2e;padding:12px;font-family:monospace;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div style="height:28px;background:linear-gradient(#2a0a0a,#4a1a1a);border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:space-between;padding:0 8px;">
+          <span style="color:#ffd23f;font-size:9px;">FRAT 1/3 ░░░█ FRAT 2/3 ░░░░ FRAT 3/3 ░░░░</span>
+        </div>
+        <!-- overworld map strip -->
+        <div style="height:28px;background:#0a1a0a;display:flex;align-items:center;gap:4px;padding:0 6px;overflow:hidden;">
+          <div style="width:18px;height:18px;background:#9ab485;border-radius:50%;border:2px solid #ffd23f;display:flex;align-items:center;justify-content:center;"><span style="font-size:7px;">🛹</span></div>
+          <div style="flex:1;height:2px;background:#5a3820;"></div>
+          <div style="width:18px;height:18px;background:#1a3a8c;border-radius:2px;border:2px solid #ffd23f;display:flex;align-items:center;justify-content:center;"><span style="color:#ffd23f;font-size:7px;">ΔΨ</span></div>
+          <div style="flex:1;height:2px;background:#5a3820;opacity:0.4;"></div>
+          <div style="width:18px;height:18px;background:#333;border-radius:2px;opacity:0.5;"></div>
+          <div style="flex:1;height:2px;background:#5a3820;opacity:0.2;"></div>
+          <div style="width:18px;height:18px;background:#333;border-radius:2px;opacity:0.3;"></div>
+        </div>
+        <!-- level view -->
+        <div style="height:32px;background:#1a1a2e;position:relative;overflow:hidden;">
+          <div style="position:absolute;bottom:0;left:0;right:0;height:10px;background:#5a3820;"></div>
+          <div style="position:absolute;bottom:10px;left:8px;width:28px;height:22px;background:#1a3a8c;border-radius:2px 2px 0 0;"><div style="text-align:center;color:#ffd23f;font-size:8px;margin-top:4px;">ΔΨΩ</div></div>
+          <div style="position:absolute;bottom:10px;left:60px;width:20px;height:16px;background:#6b4423;border-radius:2px 2px 0 0;"></div>
+          <div style="position:absolute;bottom:10px;left:95px;width:24px;height:14px;background:#1a6e6e;border-radius:2px 2px 0 0;"></div>
+          <div style="position:absolute;bottom:10px;left:32px;width:8px;height:12px;background:#ffd23f;border-radius:2px;"></div>
+        </div>
+        <div style="background:#0a0a1a;padding:4px 8px;border-radius:0 0 4px 4px;">
+          <span style="color:#9ab485;font-size:8px;">overworld map → pick a frat → side-scroll level → boss fight → burn</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — World Map + Levels</h3>
+      <p>Overworld map (like Mario World) shows 3 frat houses to hit. Pick your target, skate through a unique level to reach it, beat the chapter boss, burn it. Unlocks the rescue sequence after all 3. Most cinematic feel.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Most narrative weight</li><li>Each frat feels unique</li><li>Satisfying unlock arc</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Most content to build</li><li>Less replayable</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>

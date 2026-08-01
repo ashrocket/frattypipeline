@@ -1,0 +1,4 @@
+{"type":"server-started","port":64523,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:64523","screen_dir":"/Users/ashrocket/ashcode/frattypipeline/.superpowers/brainstorm/79811-1778281845/content","state_dir":"/Users/ashrocket/ashcode/frattypipeline/.superpowers/brainstorm/79811-1778281845/state"}
+{"type":"screen-added","file":"/Users/ashrocket/ashcode/frattypipeline/.superpowers/brainstorm/79811-1778281845/content/game-structure.html"}
+{"type":"screen-added","file":"/Users/ashrocket/ashcode/frattypipeline/.superpowers/brainstorm/79811-1778281845/content/level-anatomy.html"}
+{"type":"server-stopped","reason":"idle timeout"}

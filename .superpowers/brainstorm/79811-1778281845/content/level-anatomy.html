@@ -1,0 +1,135 @@
+<h2>What does a level look like?</h2>
+<p class="subtitle">How much vertical space and platforming is there between the street and the frat house?</p>
+
+<style>
+  .level-mock {
+    background: #1a1a2e;
+    border-radius: 6px;
+    overflow: hidden;
+    font-family: monospace;
+    position: relative;
+  }
+  .sky { background: linear-gradient(#0d0d2b, #1a1a4a); }
+  .label-tag {
+    font-size: 8px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-family: monospace;
+    position: absolute;
+    white-space: nowrap;
+  }
+</style>
+
+<div class="cards">
+
+  <!-- Option A: Street Brawler -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="level-mock" style="height:130px;">
+        <div class="sky" style="height:40px;display:flex;align-items:center;padding:0 10px;">
+          <span style="color:#ffd23f44;font-size:9px;">— — night sky — —</span>
+        </div>
+        <!-- Buildings as backdrop (not climbable) -->
+        <div style="position:absolute;top:8px;left:10px;width:50px;height:60px;background:#1a3a8c88;border-radius:3px 3px 0 0;display:flex;align-items:center;justify-content:center;"><span style="color:#ffd23f;font-size:10px;">ΔΨΩ</span></div>
+        <div style="position:absolute;top:18px;left:70px;width:35px;height:50px;background:#6b442388;border-radius:3px 3px 0 0;"></div>
+        <div style="position:absolute;top:24px;left:115px;width:42px;height:44px;background:#2a184588;border-radius:3px 3px 0 0;"></div>
+        <div style="position:absolute;top:14px;left:168px;width:55px;height:54px;background:#1a3a8c88;border-radius:3px 3px 0 0;display:flex;align-items:center;justify-content:center;"><span style="color:#ffd23f;font-size:9px;">FRAT</span></div>
+        <!-- Street level only -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:32px;background:#5a3820;">
+          <!-- player -->
+          <div style="position:absolute;top:-14px;left:18px;width:10px;height:16px;background:#ffd23f;border-radius:2px;"></div>
+          <!-- frat bros -->
+          <div style="position:absolute;top:-14px;left:80px;width:10px;height:16px;background:#ff7a9e;border-radius:2px;"></div>
+          <div style="position:absolute;top:-14px;left:130px;width:10px;height:16px;background:#ff7a9e;border-radius:2px;"></div>
+          <!-- trashcan -->
+          <div style="position:absolute;top:-10px;left:55px;width:7px;height:12px;background:#888;border-radius:1px;"></div>
+          <!-- ramp -->
+          <div style="position:absolute;top:-8px;left:100px;width:20px;height:8px;background:#8b5a3c;transform:skewX(-20deg);"></div>
+          <span class="label-tag" style="background:#ffd23f22;color:#ffd23f;top:2px;right:8px;">← street only, buildings = backdrop</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Street Brawler</h3>
+      <p>Like <strong>Final Fight / Double Dragon</strong>. One ground plane, buildings are just scenery. Full focus on skating fast and fighting frat bros. Reach the frat door, kick it in, boss fight inside. Simple but very juicy to play.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Fastest to build</li><li>Combat is front and center</li><li>Mobile-friendly</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less "skateboard" feel</li><li>Flat — no grinding rails</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Rooftop Parkour -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="level-mock" style="height:130px;position:relative;">
+        <div class="sky" style="height:130px;width:100%;position:absolute;top:0;"></div>
+        <!-- Ground -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:18px;background:#5a3820;"></div>
+        <!-- Buildings as platforms -->
+        <div style="position:absolute;bottom:18px;left:0px;width:48px;height:42px;background:#6b4423;border-radius:2px 2px 0 0;"></div>
+        <div style="position:absolute;bottom:18px;left:58px;width:40px;height:62px;background:#1a3a8c;border-radius:2px 2px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;"><span style="color:#ffd23f;font-size:8px;">ΑΘΣ</span></div>
+        <div style="position:absolute;bottom:18px;left:108px;width:35px;height:34px;background:#1a6e6e;border-radius:2px 2px 0 0;"></div>
+        <div style="position:absolute;bottom:18px;left:152px;width:60px;height:80px;background:#1a3a8c;border-radius:2px 2px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:4px;"><span style="color:#ffd23f;font-size:9px;">FRAT HOUSE</span></div>
+        <!-- Grinding rails between buildings -->
+        <div style="position:absolute;bottom:62px;left:50px;width:14px;height:2px;background:#ffd23f;transform:rotate(-15deg);"></div>
+        <div style="position:absolute;bottom:55px;left:100px;width:14px;height:2px;background:#ffd23f;transform:rotate(10deg);"></div>
+        <!-- Player on rooftop -->
+        <div style="position:absolute;bottom:80px;left:62px;width:9px;height:14px;background:#ffd23f;border-radius:2px;"></div>
+        <!-- Enemy on ground -->
+        <div style="position:absolute;bottom:18px;left:28px;width:9px;height:14px;background:#ff7a9e;border-radius:2px;"></div>
+        <!-- Enemy on mid roof -->
+        <div style="position:absolute;bottom:52px;left:115px;width:9px;height:14px;background:#8fc9ff;border-radius:2px;"></div>
+        <span class="label-tag" style="background:#9ab48522;color:#9ab485;top:4px;left:6px;">grind rails connect rooftops →</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Rooftop Skater</h3>
+      <p>Like <strong>Tony Hawk meets Donkey Kong</strong>. Street level + building rooftops are all platforms. Grind rails connect them. Fight on the street or up top. The frat house is the tallest building — you grind/jump your way up to the roof, then molotov it.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Most "skate game" feel</li><li>Vertical exploration</li><li>Grinding rails = satisfying</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More complex to build</li><li>Harder on mobile</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Hybrid -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="level-mock" style="height:130px;position:relative;">
+        <div class="sky" style="height:130px;width:100%;position:absolute;top:0;"></div>
+        <!-- Ground -->
+        <div style="position:absolute;bottom:0;left:0;right:0;height:18px;background:#5a3820;"></div>
+        <!-- Low platforms: benches, curbs, ramps -->
+        <div style="position:absolute;bottom:18px;left:25px;width:22px;height:8px;background:#b5ad96;border-radius:1px;"></div>
+        <div style="position:absolute;bottom:18px;left:65px;width:16px;height:12px;background:#8b5a3c;border-radius:1px;"></div>
+        <!-- Mid platform: fire escape / awning -->
+        <div style="position:absolute;bottom:48px;left:90px;width:30px;height:4px;background:#888;border-radius:1px;"></div>
+        <div style="position:absolute;bottom:48px;left:130px;width:25px;height:4px;background:#888;border-radius:1px;"></div>
+        <!-- Frat house with exterior details -->
+        <div style="position:absolute;bottom:18px;left:155px;width:68px;height:88px;background:#1a3a8c;border-radius:2px 2px 0 0;">
+          <div style="text-align:center;color:#ffd23f;font-size:8px;margin-top:4px;">ΔΨΩ FRAT</div>
+          <!-- Balcony as platform -->
+          <div style="position:absolute;bottom:36px;left:-12px;width:28px;height:4px;background:#888;border-radius:1px;"></div>
+          <!-- Ledge -->
+          <div style="position:absolute;top:24px;left:4px;right:4px;height:3px;background:#122968;border-radius:1px;"></div>
+        </div>
+        <!-- Player mid-level -->
+        <div style="position:absolute;bottom:52px;left:92px;width:9px;height:14px;background:#ffd23f;border-radius:2px;"></div>
+        <!-- Enemies at different heights -->
+        <div style="position:absolute;bottom:18px;left:42px;width:9px;height:14px;background:#ff7a9e;border-radius:2px;"></div>
+        <div style="position:absolute;bottom:52px;left:132px;width:9px;height:14px;background:#8fc9ff;border-radius:2px;"></div>
+        <span class="label-tag" style="background:#ffd23f22;color:#ffd23f;top:4px;left:6px;">street → curbs → awnings → frat balcony</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Street + Frat Climb</h3>
+      <p>Mostly street-level brawler, but with <strong>curbs, benches, fire escapes, and balconies</strong> as low platforms. The frat house has a climbable exterior — ledges, a balcony, then the roof. Best of both: accessible combat with a satisfying vertical finale.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Balanced complexity</li><li>Natural climb to boss</li><li>Good mobile feel</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Needs careful level design</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>

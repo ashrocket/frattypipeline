@@ -1,2 +1,6 @@
 .DS_Store
 .wrangler/
+node_modules/
+.venv/
+venv/
+__pycache__/

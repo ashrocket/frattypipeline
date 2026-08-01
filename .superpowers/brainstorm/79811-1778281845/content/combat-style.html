@@ -1,0 +1,139 @@
+<h2>How does combat feel?</h2>
+<p class="subtitle">The "Street Fighter meets Mario" question — how complex are your attack options?</p>
+
+<style>
+  .move-list {
+    background: #0a0a1a;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-family: monospace;
+    font-size: 11px;
+    line-height: 1.8;
+  }
+  .move-list .move-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #ffffff11;
+    padding: 2px 0;
+  }
+  .move-label { color: #9ab485; }
+  .move-input { color: #ffd23f; }
+  .move-desc { color: #aaa; font-size: 10px; }
+  .btn {
+    display: inline-block;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 10px;
+    color: #ffd23f;
+    font-family: monospace;
+  }
+  .hud-bar {
+    background: #0a0a1a;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: monospace;
+    font-size: 10px;
+    color: #aaa;
+    margin-bottom: 6px;
+  }
+  .health-bar {
+    height: 8px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #e63016 60%, #ff7a00 80%, #ffd23f 100%);
+  }
+</style>
+
+<div class="cards">
+
+  <!-- Option A: Brawler -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#111;">
+      <div class="hud-bar">
+        <span>YOU</span>
+        <div style="flex:1;background:#333;border-radius:2px;height:8px;"><div class="health-bar" style="width:75%;"></div></div>
+        <span>FRAT BRO</span>
+        <div style="flex:1;background:#333;border-radius:2px;height:8px;"><div style="width:45%;height:8px;border-radius:2px;background:linear-gradient(90deg,#e63016,#ff7a9e);"></div></div>
+      </div>
+      <div class="move-list">
+        <div class="move-row"><span class="move-label">Skate bash</span><span class="move-input"><span class="btn">→</span> + <span class="btn">A</span></span></div>
+        <div class="move-row"><span class="move-label">Kickflip attack</span><span class="move-input"><span class="btn">↑</span> + <span class="btn">A</span></span></div>
+        <div class="move-row"><span class="move-label">Board slide</span><span class="move-input"><span class="btn">↓</span> + <span class="btn">A</span></span></div>
+        <div class="move-row"><span class="move-label">Ollie</span><span class="move-input"><span class="btn">A</span></span></div>
+        <div class="move-row"><span class="move-label">Throw molotov</span><span class="move-input"><span class="btn">B</span></span></div>
+      </div>
+      <div style="color:#9ab485;font-size:9px;margin-top:6px;font-family:monospace;">← 2 buttons + directions — every move is instant, readable</div>
+    </div>
+    <div class="card-body">
+      <h3>A — Simple Brawler</h3>
+      <p>Two attack buttons (A = skate attack, B = throw). Direction modifies the attack. Like <strong>River City Ransom</strong> — approachable, snappy, never feels complex. Good for mobile.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Instantly fun</li><li>Touch-friendly</li><li>Fast to implement</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less "Street Fighter" depth</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Combo Fighter -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#111;">
+      <div class="hud-bar">
+        <span>YOU</span>
+        <div style="flex:1;background:#333;border-radius:2px;height:8px;"><div class="health-bar" style="width:75%;"></div></div>
+        <div style="color:#ffd23f;font-size:11px;padding:0 4px;">COMBO ×3</div>
+        <span>FRAT BRO</span>
+        <div style="flex:1;background:#333;border-radius:2px;height:8px;"><div style="width:45%;height:8px;border-radius:2px;background:linear-gradient(90deg,#e63016,#ff7a9e);"></div></div>
+      </div>
+      <div class="move-list">
+        <div class="move-row"><span class="move-label">Light kick</span><span class="move-input"><span class="btn">A</span></span><span class="move-desc">fast</span></div>
+        <div class="move-row"><span class="move-label">Heavy board</span><span class="move-input"><span class="btn">A</span><span class="btn">A</span><span class="btn">A</span></span><span class="move-desc">combo ender</span></div>
+        <div class="move-row"><span class="move-label">Kickflip DP</span><span class="move-input"><span class="btn">→↓↘</span>+<span class="btn">A</span></span><span class="move-desc">invincible startup</span></div>
+        <div class="move-row"><span class="move-label">Grind cancel</span><span class="move-input"><span class="btn">↓</span>+<span class="btn">B</span></span><span class="move-desc">anti-air</span></div>
+        <div class="move-row"><span class="move-label">SUPER: Rail Slam</span><span class="move-input"><span class="btn">↓↘→</span>+<span class="btn">B</span></span><span class="move-desc">super meter</span></div>
+      </div>
+      <div style="color:#9ab485;font-size:9px;margin-top:6px;font-family:monospace;">← SF-style inputs, combo strings, super meter</div>
+    </div>
+    <div class="card-body">
+      <h3>B — Combo Fighter</h3>
+      <p>Real Street Fighter DNA — light/heavy attacks, combo strings, a super meter. Directional special moves (like a skateboard DP). High skill ceiling. Hard on mobile without a fight pad.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Deep combat</li><li>Mastery curve</li><li>True SF feel</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Brutal on touchscreen</li><li>Complex to implement</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Skate-Combat Hybrid -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#111;">
+      <div class="hud-bar">
+        <span>YOU</span>
+        <div style="flex:1;background:#333;border-radius:2px;height:8px;"><div class="health-bar" style="width:75%;"></div></div>
+        <div style="color:#ff7a00;font-size:10px;padding:0 4px;">TRICK ████░</div>
+        <span>FRAT BRO</span>
+        <div style="flex:1;background:#333;border-radius:2px;height:8px;"><div style="width:45%;height:8px;border-radius:2px;background:linear-gradient(90deg,#e63016,#ff7a9e);"></div></div>
+      </div>
+      <div class="move-list">
+        <div class="move-row"><span class="move-label">Ollie</span><span class="move-input"><span class="btn">A</span></span><span class="move-desc">jump + stomp on landing</span></div>
+        <div class="move-row"><span class="move-label">Kickflip</span><span class="move-input"><span class="btn">A</span>+<span class="btn">←→</span></span><span class="move-desc">hits airborne enemies</span></div>
+        <div class="move-row"><span class="move-label">Grind</span><span class="move-input">rail + <span class="btn">↓</span></span><span class="move-desc">deals damage while grinding</span></div>
+        <div class="move-row"><span class="move-label">Bail tackle</span><span class="move-input"><span class="btn">B</span> near enemy</span><span class="move-desc">grab+throw</span></div>
+        <div class="move-row"><span class="move-label">Trick finisher</span><span class="move-input">full trick meter</span><span class="move-desc">screen-clear</span></div>
+      </div>
+      <div style="color:#9ab485;font-size:9px;margin-top:6px;font-family:monospace;">← skating IS the fighting — tricks = attacks, grind = damage</div>
+    </div>
+    <div class="card-body">
+      <h3>C — Skate-Combat Hybrid</h3>
+      <p>Skating moves ARE combat moves. Ollie to stomp, kickflip to hit airborne bros, grind through enemies on a rail. A "trick meter" fills as you chain moves — full meter = a devastating finisher. Most unique feel.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Totally original</li><li>Skating + fighting unified</li><li>Trick meter = great flow</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Needs careful tuning</li><li>Learning curve</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>

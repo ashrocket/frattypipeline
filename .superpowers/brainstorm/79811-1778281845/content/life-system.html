@@ -1,0 +1,182 @@
+<h2>How do you lose a life?</h2>
+<p class="subtitle">"Becoming a sorority girl" — how does the frat's influence creep in?</p>
+
+<style>
+  .meter-block {
+    background: #0a0a1a;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+  .bar-track {
+    height: 12px;
+    background: #222;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 4px 0;
+  }
+  .punk-fill { background: linear-gradient(90deg, #9ab485, #ffd23f); height: 100%; border-radius: 3px; }
+  .frat-fill { background: linear-gradient(90deg, #ff7a9e, #ffffff); height: 100%; border-radius: 3px; }
+  .char-stages {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 8px 0;
+  }
+  .char-fig {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 8px;
+    font-family: monospace;
+    color: #aaa;
+  }
+  .char-svg {
+    width: 28px;
+    height: 42px;
+    border-radius: 2px;
+  }
+  .arrow-right { color: #ffd23f; font-size: 14px; align-self: center; }
+  .stage-label { font-size: 7px; text-align: center; max-width: 32px; color: #888; }
+</style>
+
+<div class="cards">
+
+  <!-- Option A: Classic Health Bar -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#111;">
+      <div class="meter-block">
+        <div style="display:flex;justify-content:space-between;color:#aaa;">
+          <span>HEALTH</span><span style="color:#ffd23f;">♥ ♥ ♥</span>
+        </div>
+        <div class="bar-track"><div class="punk-fill" style="width:60%;"></div></div>
+        <div style="color:#888;font-size:9px;margin-top:4px;">get hit enough → health hits 0 → life lost → respawn</div>
+      </div>
+      <!-- 3 hearts -->
+      <div style="display:flex;gap:10px;justify-content:center;padding:6px 0;">
+        <div style="text-align:center;">
+          <div style="font-size:24px;">♥</div>
+          <div style="font-size:8px;color:#9ab485;font-family:monospace;">PUNK</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:24px;">♥</div>
+          <div style="font-size:8px;color:#9ab485;font-family:monospace;">PUNK</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:24px;color:#ff7a9e;">♥</div>
+          <div style="font-size:8px;color:#ff7a9e;font-family:monospace;">LAST ONE</div>
+        </div>
+      </div>
+      <div style="color:#9ab485;font-size:9px;font-family:monospace;text-align:center;">lose all health → "FRAT'D OUT" screen → respawn as yourself</div>
+    </div>
+    <div class="card-body">
+      <h3>A — Health Bar (Classic)</h3>
+      <p>Simple health bar. Lose all health = life lost. A stylized <strong>"FRAT'D OUT"</strong> screen shows your character briefly transformed into a sorority girl before respawning. Clean, familiar, low friction.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Instantly readable</li><li>Mobile friendly</li><li>Easy to balance</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Transformation is just a cutscene</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Frat Meter fills -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#111;">
+      <div class="meter-block">
+        <div style="display:flex;justify-content:space-between;color:#aaa;">
+          <span style="color:#9ab485;">◀ PUNK</span><span style="color:#ff7a9e;">FRAT ▶</span>
+        </div>
+        <div class="bar-track">
+          <div style="display:flex;height:100%;">
+            <div class="punk-fill" style="width:55%;border-radius:3px 0 0 3px;"></div>
+            <div style="flex:1;background:#333;"></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:#555;margin-top:2px;">
+          <span>full punk = power boost</span><span>full frat = FRAT'D OUT 💀</span>
+        </div>
+      </div>
+      <div class="meter-block" style="margin-top:0;">
+        <div style="color:#aaa;margin-bottom:4px;">WHAT MOVES THE METER:</div>
+        <div style="color:#9ab485;font-size:9px;">← punk: land tricks, burn things, fight back</div>
+        <div style="color:#ff7a9e;font-size:9px;">→ frat: get hit, grab a beer, touch pink solo cups</div>
+        <div style="font-size:9px;color:#ffd23f;margin-top:4px;">meter fully red = transformation + life lost</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Punk/Frat Tug-of-War</h3>
+      <p>A single sliding meter. Punk on the left, frat on the right. Taking hits, touching frat items, or getting pinned by bros pushes it toward frat. Landing tricks and fighting back push it punk. Fill frat side 100% = life lost. Carry-over from the current game's DNA.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Matches existing game feel</li><li>Creates constant tension</li><li>Playing aggressively = defense</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More complex to read quickly</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Visual Outfit Degradation -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#111;">
+      <div class="char-stages">
+        <div class="char-fig">
+          <svg class="char-svg" viewBox="0 0 28 42">
+            <!-- Full punk -->
+            <circle cx="14" cy="7" r="6" fill="#f0c8a0"/>
+            <rect x="9" y="13" width="10" height="16" fill="#2a1845" rx="1"/>
+            <rect x="7" y="14" width="5" height="12" fill="#2a1845" rx="1"/>
+            <rect x="16" y="14" width="5" height="12" fill="#2a1845" rx="1"/>
+            <rect x="9" y="29" width="4" height="10" fill="#1a1a1a" rx="1"/>
+            <rect x="15" y="29" width="4" height="10" fill="#1a1a1a" rx="1"/>
+            <!-- mohawk -->
+            <rect x="11" y="1" width="6" height="5" fill="#e63016" rx="1"/>
+          </svg>
+          <span class="stage-label" style="color:#9ab485;">FULL PUNK</span>
+        </div>
+        <div class="arrow-right">→</div>
+        <div class="char-fig">
+          <svg class="char-svg" viewBox="0 0 28 42">
+            <!-- Getting frat'd - polo appearing -->
+            <circle cx="14" cy="7" r="6" fill="#f0c8a0"/>
+            <rect x="9" y="13" width="10" height="16" fill="#8fc9ff" rx="1"/>
+            <rect x="7" y="14" width="5" height="12" fill="#8fc9ff" rx="1"/>
+            <rect x="16" y="14" width="5" height="12" fill="#8fc9ff" rx="1"/>
+            <rect x="9" y="29" width="4" height="10" fill="#c8bfa6" rx="1"/>
+            <rect x="15" y="29" width="4" height="10" fill="#c8bfa6" rx="1"/>
+            <!-- backwards cap -->
+            <rect x="10" y="1" width="8" height="4" fill="#1a3a8c" rx="1"/>
+          </svg>
+          <span class="stage-label">SLIPPING...</span>
+        </div>
+        <div class="arrow-right">→</div>
+        <div class="char-fig">
+          <svg class="char-svg" viewBox="0 0 28 42">
+            <!-- Fully sorority'd -->
+            <circle cx="14" cy="7" r="6" fill="#f0c8a0"/>
+            <rect x="9" y="13" width="10" height="10" fill="#ff5a8a" rx="1"/>
+            <rect x="7" y="14" width="5" height="9" fill="#ff5a8a" rx="1"/>
+            <rect x="16" y="14" width="5" height="9" fill="#ff5a8a" rx="1"/>
+            <rect x="8" y="23" width="12" height="8" fill="#ffffff" rx="1"/>
+            <rect x="10" y="31" width="3" height="8" fill="#ffb6c1" rx="1"/>
+            <rect x="15" y="31" width="3" height="8" fill="#ffb6c1" rx="1"/>
+            <!-- ponytail -->
+            <rect x="17" y="4" width="3" height="8" fill="#ffd23f" rx="1"/>
+          </svg>
+          <span class="stage-label" style="color:#ff7a9e;">FRAT'D OUT</span>
+        </div>
+      </div>
+      <div style="color:#9ab485;font-size:9px;font-family:monospace;text-align:center;padding:4px;">outfit visually transforms as frat meter rises — player can see exactly how close they are</div>
+    </div>
+    <div class="card-body">
+      <h3>C — Outfit Degradation</h3>
+      <p>Your character <strong>visually transforms</strong> as you take frat damage — mohawk flattens, jean jacket becomes a polo, khakis appear, ponytail pops out. The transformation IS the health bar. Fully sorority-fied = life lost. Most expressive, most thematic.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Wildly thematic</li><li>No HUD needed for health</li><li>Visual storytelling</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Hardest to implement</li><li>Subtle at small sizes</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
