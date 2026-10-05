@@ -1,203 +1,52 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Fratty Pipeline</title>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
-<script>
-  window.onSpotifyWebPlaybackSDKReady = () => {
-    window.spotifySDKReady = true;
-    const t = sessionStorage.getItem('spotify_access_token');
-    if (t && typeof window.initializeSpotifyPlayer === 'function') window.initializeSpotifyPlayer();
-  };
-</script>
-<script src="https://sdk.scdn.co/spotify-player.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Grotesk:wght@400;500;700&family=Archivo+Black&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#171923" />
+  <meta name="description" content="A skateboard punk arcade rampage. Twelve frats. Three lives. One very bad influence. No accounts. Just play." />
+  <title>Greek Row — Burn the status quo.</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-<div class="app">
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">F<span class="brand-dot">/</span>P</span>
-      <div class="brand-text">
-        <div class="brand-title">FRATTY PIPELINE</div>
-        <div class="brand-sub">an endless burn-down · v2</div>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <select id="university" class="select">
-        <option value="USC">USC</option>
-        <option value="UCLA">UCLA</option>
-        <option value="UC Berkeley">UC Berkeley</option>
-        <option value="University of Texas">UT Austin</option>
-        <option value="University of Michigan">Michigan</option>
-      </select>
-      <button id="spotify-login" class="btn ghost">Connect Spotify</button>
-    </div>
-  </header>
-
-  <main class="stage">
-    <aside class="panel left">
-      <div class="panel-h">RUN</div>
-      <div class="stat big"><div class="stat-l">Score</div><div id="hud-score" class="stat-v">0</div></div>
-      <div class="stat"><div class="stat-l">Best</div><div id="hud-best" class="stat-v">0</div></div>
-      <div class="stat"><div class="stat-l">Burned</div><div id="hud-burned" class="stat-v">0</div></div>
-      <div class="combo-box">
-        <div class="stat-l">Combo</div>
-        <div id="hud-combo" class="combo-v">×1</div>
-        <div class="combo-bar"><div id="hud-combo-bar"></div></div>
-      </div>
-      <div class="meter punk">
-        <div class="meter-l">PUNK</div>
-        <div class="meter-bar"><div id="meter-punk-fill"></div></div>
-      </div>
-      <div class="meter frat">
-        <div class="meter-l">FRAT</div>
-        <div class="meter-bar"><div id="meter-frat-fill"></div></div>
-      </div>
-      <div class="lives">
-        <div class="stat-l">Pipeline</div>
-        <div id="hud-lives" class="lives-row"></div>
-      </div>
-    </aside>
-
-    <div id="game-wrapper">
-      <div id="game"></div>
-      <div id="overlay" class="overlay hidden">
-        <div class="overlay-card">
-          <div id="overlay-title" class="overlay-title">PAUSED</div>
-          <div id="overlay-sub" class="overlay-sub">press SPACE</div>
-          <div id="overlay-stats" class="overlay-stats"></div>
-          <button id="overlay-btn" class="btn primary">RESUME</button>
+  <div id="app" data-screen="title">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Greek Row home"><span class="brand-symbol">G<span>/</span>R</span><span>GREEK<br>ROW</span></a>
+      <div class="edition">GROUCHO BARKS PRESENTS <span>AN ARCADE ACT OF REBELLION</span></div>
+      <div class="top-actions"><span id="server-status" class="server-status"><i></i>20 PLAYER CLUB</span><button id="sound-btn" class="icon-button" aria-label="Enable or mute sound" aria-pressed="false">♫</button><button id="pause-btn" class="icon-button" aria-label="Pause game" hidden>Ⅱ</button></div>
+    </header>
+    <main id="stage" aria-label="Greek Row arcade game">
+      <div id="world" role="img" aria-label="Side-view neighborhood. Skate left and right, carve in and out of street depth, and throw at glowing lawns."></div>
+      <div class="vignette"></div>
+      <section id="title-screen" class="title-screen">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="tiny-star">✦</span> THREE LIVES. ZERO REGRETS.</div>
+          <h1>GREEK<br><span>ROW</span><b>↗</b></h1>
+          <p class="tagline">Burn the status quo.</p>
+          <p class="hero-description">Skate Greek Row. Torch every lawn. Dodge the makeover.<br>Get turned? Come back <em>even more punk.</em></p>
+          <div class="start-row"><button id="start-btn" class="primary">LET’S RIOT <span>↗</span></button><span class="no-signup">NO ACCOUNT.<br>ALL ATTITUDE.</span></div>
+          <div class="hero-controls"><span><kbd>WASD</kbd> MOVE</span><span><kbd>F</kbd> THROW</span><span><kbd>SPACE</kbd> OLLIE</span></div>
+          <button id="how-btn" class="text-button">FIRST TIME ON THE ROW? <span>HOW TO PLAY ↗</span></button>
         </div>
-      </div>
-      <div id="start-overlay" class="overlay">
-        <div class="overlay-card large start-card">
-          <div class="overlay-title">FRATTY PIPELINE</div>
-          <div class="overlay-sub">don't get pipelined. burn it down.</div>
-
-          <div class="burn-loop">
-            <span>near frat → PUNK fills</span>
-            <span class="ba">→</span>
-            <span>PUNK max → 🚬 lit</span>
-            <span class="ba">→</span>
-            <span>reach trashcan → F</span>
-            <span class="ba">→</span>
-            <span style="color:#ff7a00">🔥 BURNED</span>
-          </div>
-
-          <ul class="how" id="how-kb">
-            <li><kbd>WASD</kbd>/<kbd>ARROWS</kbd> move · <kbd>SPACE</kbd> dash · <kbd>F</kbd> burn · <kbd>Q</kbd> power-up</li>
-          </ul>
-          <ul class="how hidden" id="how-mobile">
-            <li>Tilt to steer · Swipe ↑ to kick · Swipe ← → to dodge · Tap to use power-up</li>
-          </ul>
-
-          <details class="legend-details">
-            <summary>how to play ↓</summary>
-            <div class="legend-grid">
-              <div class="legend-section">
-                <div class="legend-hd">GRAB THESE</div>
-                <div class="legend-item"><span class="ldot" style="background:#ff2d6f"></span>Vinyl — +PUNK pts</div>
-                <div class="legend-item"><span class="ldot" style="background:#ffd23f"></span>Zine — +PUNK pts</div>
-                <div class="legend-item"><span class="ldot" style="background:#ff7a00"></span>Joint — +PUNK pts</div>
-                <div class="legend-item"><span class="ldot" style="background:#6effff"></span>Skateboard — +speed</div>
-                <div class="legend-hd" style="margin-top:6px">ENTER VENUES</div>
-                <div class="legend-item"><span class="ldot" style="background:#3a8559"></span>Coffee shop — big +PUNK</div>
-                <div class="legend-item"><span class="ldot" style="background:#d9325b"></span>Record store — big +PUNK</div>
-                <div class="legend-item"><span class="ldot" style="background:#ff7a00"></span>Skate park — big +PUNK</div>
-              </div>
-              <div class="legend-section">
-                <div class="legend-hd">DODGE THESE</div>
-                <div class="legend-item"><span class="ldot" style="background:#ff7a9e"></span>Fratbro — fills FRAT</div>
-                <div class="legend-item"><span class="ldot" style="background:#8a8a8a"></span>Pledge — patrols</div>
-                <div class="legend-item"><span class="ldot" style="background:#ffd23f;border-color:#0a0a0a"></span>Sorority — chases you</div>
-                <div class="legend-item"><span class="ldot" style="background:#2a4a8a"></span>RA — freezes you</div>
-                <div class="legend-hd" style="margin-top:6px">POWER-UPS (Q)</div>
-                <div class="legend-item"><span class="ldot" style="background:#6effff"></span>Skate — speed boost</div>
-                <div class="legend-item"><span class="ldot" style="background:#ff2d6f"></span>Spray — tag frat ×2 pts</div>
-                <div class="legend-item"><span class="ldot" style="background:#ff7a00"></span>Boombox — knockback</div>
-                <div class="legend-item"><span class="ldot" style="background:#ffd23f"></span>Mosh pit — invincible</div>
-                <div class="legend-item"><span class="ldot" style="background:#ff2d6f"></span>Zine bomb — clears all</div>
-              </div>
-            </div>
-          </details>
-          <script>
-            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-              document.getElementById('how-kb').classList.add('hidden');
-              document.getElementById('how-mobile').classList.remove('hidden');
-            }
-          </script>
-          <button id="start-btn" class="btn primary big">START RUN</button>
-        </div>
-      </div>
-    </div>
-
-    <aside class="panel right">
-      <div class="panel-h">KIT</div>
-      <div id="powerup-slot" class="pup-slot">
-        <div class="pup-empty">empty</div>
-      </div>
-      <div class="panel-h" style="margin-top:14px">CHARACTER</div>
-      <div id="char-creator" class="char-creator">
-        <div class="cc-preview-wrap">
-          <canvas id="char-preview" width="80" height="120"></canvas>
-        </div>
-        <div class="cc-field">
-          <label class="cc-label">Name</label>
-          <input id="cc-name" class="cc-input" type="text" maxlength="12" placeholder="your name" />
-        </div>
-        <div class="cc-field">
-          <label class="cc-label">Hair Style</label>
-          <div id="cc-hairstyle" class="cc-row"></div>
-        </div>
-        <div class="cc-field">
-          <label class="cc-label">Hair Color</label>
-          <div id="cc-haircolor" class="cc-swatches"></div>
-        </div>
-        <div class="cc-field">
-          <label class="cc-label">Skin Tone</label>
-          <div id="cc-skin" class="cc-swatches"></div>
-        </div>
-        <div class="cc-field">
-          <label class="cc-label">Shirt</label>
-          <div id="cc-shirt" class="cc-swatches"></div>
-        </div>
-        <div class="cc-field">
-          <label class="cc-label">Pants</label>
-          <div id="cc-pants" class="cc-swatches"></div>
-        </div>
-      </div>
-      <div class="panel-h" style="margin-top:14px">FRAT ROW</div>
-      <div id="row-list" class="row-list"></div>
-    </aside>
-  </main>
-
-  <footer class="bottombar">
-    <div class="bb-left">
-      <button id="play-btn" class="iconbtn" title="Play">▶</button>
-      <button id="pause-btn" class="iconbtn hidden" title="Pause">❚❚</button>
-      <div id="track-info" class="track">no track</div>
-    </div>
-    <div class="bb-right">
-      <span id="user-info" class="user">guest</span>
-      <button id="logout-btn" class="iconbtn hidden" title="Logout">×</button>
-    </div>
-  </footer>
-</div>
-
-<script src="js/haptics.js"></script>
-<script src="js/util.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/particles.js"></script>
-<script src="js/entities.js"></script>
-<script src="js/game.js"></script>
-<script src="js/spotify.js"></script>
-<script src="js/main.js"></script>
-<button id="motion-btn" aria-label="Enable tilt controls" style="display:none;position:fixed;bottom:80px;right:16px;z-index:9999;background:rgba(0,0,0,0.8);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:7px 14px;font-size:11px;font-family:monospace;letter-spacing:.05em;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">↺ TILT</button>
+        <div class="scene-sticker"><span>WELCOME TO</span><strong>GREEK ROW</strong><small>EST. BAD DECISIONS</small></div>
+        <div class="title-bottom"><span><b>12</b> FRAT HOUSES</span><span><b>03</b> PUNK LIVES</span><span><b>01</b> LOUD EXIT</span><span class="personal-best">PERSONAL BEST <strong id="title-best">000000</strong></span></div>
+      </section>
+      <section id="hud" class="hud" aria-label="Run status" hidden>
+        <div class="run-stats"><div class="score-block"><span>SCORE</span><strong id="score">000000</strong></div><div class="lives-block"><span>PUNK LIVES</span><strong id="lives" aria-label="3 lives">✦ ✦ ✦</strong></div><div class="combo-block"><span>STREAK</span><strong id="combo">×1</strong><div class="small-track"><i id="combo-fill"></i></div></div></div>
+        <div class="mission"><div><span id="district">01 / FRESHMAN ROW</span><strong><b id="burned">0</b> / 12 DOWN</strong></div><div id="house-progress" class="house-progress"></div></div>
+        <div class="pipeline-panel"><div><span id="identity">PUNK, UNFILTERED</span><strong id="pressure-number">0%</strong></div><div class="pressure-track"><i id="pressure-fill"></i></div><small>MAKEOVER <span>SWAG + PERFUME = PREPPY</span></small></div>
+        <div id="target-prompt" class="target-prompt"><span class="target-icon">◎</span><div><strong id="target-name">FIND THE NEXT LAWN</strong><span id="target-health">Follow the row. Hold F to throw.</span></div></div>
+        <div class="kit-panel"><div><span>MOLOTOVS</span><strong id="ammo">● ● ● ● ●</strong><small>AUTO REFILL</small></div><div><span>SKATEBOARD</span><strong id="dash-state">READY ↗</strong><small>SPACE: OLLIE · SHIFT: PUSH</small></div></div>
+      </section>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <div id="transformation" class="transformation" hidden><span>THE PIPELINE GOT ITS MAKEOVER.</span><strong>SORORITY MODE.</strong><p id="transform-copy">Wait for the comeback.</p></div>
+      <div id="touch-controls" class="touch-controls" hidden><div id="joystick" class="joystick" aria-label="Drag to move"><span>MOVE</span><i id="stick"></i></div><div class="touch-actions"><button id="dash-touch" aria-label="Push skateboard">PUSH ↗</button><button id="ollie-touch" aria-label="Ollie skateboard">OLLIE ↑</button><button id="fire-touch" aria-label="Hold to throw molotovs">THROW<br><b>✦</b></button></div></div>
+      <section id="dialog" class="dialog-backdrop" hidden aria-label="Game dialog"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><span id="dialog-kicker" class="eyebrow">GREEK ROW</span><h2 id="dialog-title">HOW TO RIOT.</h2><div id="dialog-body"></div><div class="dialog-actions"><button id="dialog-primary" class="primary">LET’S GO ↗</button><button id="dialog-secondary" class="secondary" hidden>BACK</button></div></div></section>
+      <div id="fatal" class="fatal" hidden><h2>THE STAGE COULDN’T LOAD.</h2><p id="fatal-message"></p><button onclick="location.reload()" class="primary">TRY AGAIN ↗</button></div>
+    </main>
+    <footer><div class="track"><span class="equalizer"><i></i><i></i><i></i><i></i></span><span id="track-label">DEMO INSTRUMENTAL · ON REPEAT</span></div><span id="footer-hint">← → ALONG THE ROW · ↑ ↓ IN & OUT OF DEPTH</span><span class="version">VOL. 03 <i>✦</i></span></footer>
+  </div>
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>
