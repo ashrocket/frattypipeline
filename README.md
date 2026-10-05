@@ -74,6 +74,9 @@ runs, not multiplayer synchronization or unique-person identification.
 - Title/end screens poll status every ten seconds; admitted screens use heartbeats.
 - Heartbeats retry after 2/4/8 seconds. Only HTTP 410 or actual lease expiry pauses.
 - Inactivity releases a slot after two minutes; a 20-minute cap warns a minute early.
+- A place in line is held for ten minutes without heartbeats, so phones can be locked
+  while waiting. Only waiters heard from in the last 90 seconds are seated; silent
+  ones keep their place and are skipped until they return.
 - The production Worker routes every request through the same singleton Durable Object.
 
 ## Verification

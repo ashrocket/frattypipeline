@@ -80,17 +80,53 @@ test('stale active leases expire and live waiters are promoted at the lease boun
   await assert.rejects(queue.perform('heartbeat', { token: active.token }), { status: 410, code: 'SESSION_EXPIRED' });
 });
 
-test('abandoned waiting entries expire without taking a newly available seat', async () => {
+test('silent waiters keep their place but are skipped for seats until they return', async () => {
   const { queue, advance } = room({ config: { capacity: 1 } });
   const active = await queue.perform('join');
-  const abandoned = await queue.perform('join');
+  const away = await queue.perform('join');
   advance(60_000);
   await queue.perform('heartbeat', { token: active.token });
   const live = await queue.perform('join');
   advance(30_000);
   await queue.perform('leave', { token: active.token });
   assert.equal((await queue.perform('heartbeat', { token: live.token })).status, 'active');
-  await assert.rejects(queue.perform('heartbeat', { token: abandoned.token }), { status: 410 });
+  const back = await queue.perform('heartbeat', { token: away.token });
+  assert.equal(back.status, 'waiting');
+  assert.equal(back.position, 1);
+});
+
+test('a returning waiter takes a seat that opened while they were away', async () => {
+  const { queue, advance } = room({ config: { capacity: 1 } });
+  const active = await queue.perform('join');
+  const away = await queue.perform('join');
+  advance(100_000);
+  await queue.perform('leave', { token: active.token });
+  assert.equal((await queue.status()).activeCount, 0);
+  assert.equal((await queue.perform('heartbeat', { token: away.token })).status, 'active');
+});
+
+test('a place in line expires only after the full waiting lease', async () => {
+  const { queue, advance } = room({
+    config: { capacity: 1, activeLeaseSeconds: 3600, maxSessionSeconds: 3600 },
+  });
+  await queue.perform('join');
+  const away = await queue.perform('join');
+  advance(QUEUE_CONFIG.waitingLeaseSeconds * 1000 - 1000);
+  assert.equal((await queue.perform('heartbeat', { token: away.token })).position, 1);
+  advance(QUEUE_CONFIG.waitingLeaseSeconds * 1000);
+  await assert.rejects(queue.perform('heartbeat', { token: away.token }), { status: 410 });
+});
+
+test('waiters saved before presence tracking are still seated', async () => {
+  const token = 'a'.repeat(64);
+  const { queue } = room({
+    config: { capacity: 1 },
+    store: memoryStore({
+      version: 1,
+      players: [{ token, status: 'waiting', joinedAt: 990_000, expiresAt: 1_050_000 }],
+    }),
+  });
+  assert.deepEqual(await queue.perform('sweep'), { activeCount: 1, waitingCount: 0 });
 });
 
 test('continuous heartbeats cannot extend a reservation beyond the fairness limit', async () => {
@@ -147,7 +183,7 @@ test('waiting capacity is bounded and an expired client can safely rejoin', asyn
   const active = await queue.perform('join');
   await queue.perform('join');
   await assert.rejects(queue.perform('join'), { status: 429, code: 'QUEUE_FULL' });
-  advance(QUEUE_CONFIG.activeLeaseSeconds * 1000 + 10_000);
+  advance(Math.max(QUEUE_CONFIG.activeLeaseSeconds, QUEUE_CONFIG.waitingLeaseSeconds) * 1000 + 10_000);
   const rejoined = await queue.perform('join', { token: active.token });
   assert.equal(rejoined.status, 'active');
   assert.notEqual(rejoined.token, active.token);

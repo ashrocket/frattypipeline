@@ -5,7 +5,12 @@ export const QUEUE_CONFIG = Object.freeze({
   // Outlasts the client's two-minute idle grace (src/session.js IDLE_MS) plus one
   // heartbeat, because a backgrounded or locked phone cannot heartbeat at all.
   activeLeaseSeconds: 150,
-  waitingLeaseSeconds: 90,
+  // A place in line survives this long without heartbeats, so a phone can be locked
+  // or switched away from while waiting...
+  waitingLeaseSeconds: 10 * 60,
+  // ...but only waiters heard from this recently are seated. Silent ones keep their
+  // place and are skipped until they return, so a dead entry never takes a seat.
+  waitingPresenceSeconds: 90,
   maxSessionSeconds: 20 * 60,
   maxWaiting: 500,
 });
@@ -57,6 +62,7 @@ function validateState(state, config) {
       !['active', 'waiting'].includes(player.status) ||
       !Number.isFinite(player.expiresAt) ||
       !Number.isFinite(player.joinedAt) ||
+      (player.lastSeen !== undefined && !Number.isFinite(player.lastSeen)) ||
       (player.status === 'active' && !Number.isFinite(player.startedAt))
     ) {
       throw new Error('Invalid saved queue player');
@@ -169,6 +175,7 @@ export class AdmissionQueue {
               token: freshToken,
               status: 'waiting',
               joinedAt: now,
+              lastSeen: now,
               expiresAt: now + this.config.waitingLeaseSeconds * 1000,
             };
             next.players.push(player);
@@ -189,6 +196,8 @@ export class AdmissionQueue {
         this.promote(next, now);
         player = undefined;
       }
+      // A returning waiter takes any seat that opened while they were away.
+      this.promote(next, now);
 
       await this.store.save(next, this.nextExpiry(next));
       this.state = next;
@@ -228,6 +237,7 @@ export class AdmissionQueue {
   }
 
   renew(player, now) {
+    if (player.status === 'waiting') player.lastSeen = now;
     player.expiresAt =
       player.status === 'active'
         ? Math.min(
@@ -242,12 +252,18 @@ export class AdmissionQueue {
       this.config.capacity - state.players.filter((player) => player.status === 'active').length;
     for (const player of state.players) {
       if (vacancies <= 0) break;
-      if (player.status !== 'waiting') continue;
+      if (player.status !== 'waiting' || !this.present(player, now)) continue;
       player.status = 'active';
       player.startedAt = now;
       this.renew(player, now);
       vacancies--;
     }
+  }
+
+  present(player, now) {
+    // Entries saved before lastSeen existed are still bounded by their old 90 s lease.
+    if (player.lastSeen === undefined) return true;
+    return player.lastSeen + this.config.waitingPresenceSeconds * 1000 > now;
   }
 
   nextExpiry(state) {
