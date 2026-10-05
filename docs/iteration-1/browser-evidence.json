@@ -1,0 +1,88 @@
+{
+  "tool": "Connected Chrome; http://127.0.0.1:5173/tests/qa.html; queue on 8797",
+  "date": "2026-10-05T04:43:23.956Z",
+  "scriptedRun": {
+    "seconds": 60.00160000002384,
+    "inputPulses": 599,
+    "consoleErrors": [],
+    "runtimeErrors": [],
+    "pass": true,
+    "result": "playing",
+    "houses": 1,
+    "simulationSeconds": 60.35,
+    "score": 11550,
+    "audio": "decoded MP3; AudioContext running"
+  },
+  "audioLifecycle": {
+    "pause": {
+      "phase": "paused",
+      "audio": "suspended",
+      "simulationSeconds": 60.35
+    },
+    "resume": {
+      "phase": "playing",
+      "audio": "running",
+      "simulationSeconds": 60.65
+    },
+    "pass": true
+  },
+  "render": [
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "operations": 439,
+      "gradients": 0,
+      "particles": 192,
+      "particleCap": 192,
+      "visibleThreats": 6
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "operations": 360,
+      "gradients": 0,
+      "particles": 96,
+      "particleCap": 96,
+      "hud": 56,
+      "freeHeightPercent": 76.77725118483413,
+      "playerHeightPercent": 77.5,
+      "visibleThreats": 6
+    },
+    {
+      "viewport": [
+        844,
+        390
+      ],
+      "operations": 343,
+      "gradients": 0,
+      "particles": 96,
+      "particleCap": 96,
+      "hud": 52,
+      "visibleThreats": 6
+    }
+  ],
+  "uniformPixels": {
+    "looks": 5,
+    "stepsPerLook": 5,
+    "minimumChangedOpaquePercent": 10.79,
+    "maximumChangedOpaquePercent": 34.55,
+    "pass": true
+  },
+  "manualViewportChecks": [
+    "1440x900 desktop title and play",
+    "390x844 portrait play and pause",
+    "844x390 landscape play and pause",
+    "rotation pauses; four-beat resume",
+    "PRETTY selection persists and is distinct from uniform",
+    "player count visible during play and pause"
+  ],
+  "headlessHarness": "Blocked at Chrome launch by workspace sandbox (SIGABRT / EPERM). Connected Chrome used instead.",
+  "limitations": [
+    "No physical iOS, Bluetooth latency, or physical gamepad test. Gamepad mapping and dead zones tested with API fixtures.",
+    "Reviewer 5273 server left running; its existing queue process needs a restart to load the new status route."
+  ]
+}

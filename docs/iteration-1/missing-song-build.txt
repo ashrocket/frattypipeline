@@ -1,0 +1,31 @@
+Temporary song-free fixture: /private/tmp/pipeline-no-song-yl37eflr
+BUILD exit 0
+
+> fratty-pipeline@3.0.0 build
+> node scripts/check-song.mjs --warn && vite build && node scripts/lint-dist.mjs
+
+vite v8.3.2 building client environment for production...
+transforming...
+✓ 29 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  4.09 kB │ gzip:  1.37 kB
+dist/assets/index-DU8DzmL3.css   9.27 kB │ gzip:  2.86 kB
+dist/assets/index-BKE32cF5.js   77.61 kB │ gzip: 29.67 kB
+
+✓ built in 237ms
+Built-copy audit: PASS.
+
+!!! SONG FILE MISSING — run scripts/import-song.sh !!!
+Build remains playable with SFX and the visual beat clock.
+
+
+CHECK:SONG exit 1
+
+> fratty-pipeline@3.0.0 check:song
+> node scripts/check-song.mjs
+
+
+!!! SONG FILE MISSING — run scripts/import-song.sh !!!
+Build remains playable with SFX and the visual beat clock.
+

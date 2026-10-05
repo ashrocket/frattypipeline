@@ -5,13 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "vite build",
+    "build": "node scripts/check-song.mjs --warn && vite build && node scripts/lint-dist.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.test.js",
-    "deploy": "npm run build && wrangler deploy"
-  },
-  "dependencies": {
-    "three": "^0.186.1"
+    "deploy": "npm run build && wrangler deploy",
+    "check:song": "node scripts/check-song.mjs",
+    "gauntlet": "node scripts/gauntlet.mjs --holdout"
   },
   "devDependencies": {
     "vite": "^8.3.2",

@@ -1,0 +1,11 @@
+Checked Novice: 200 runs, timeout.
+  seed 10095: timeout (360.0 s, 11 houses)
+Checked Skilled: 200 runs, fairness/termination OK.
+Seeds 10001–10200; 1 cosmetic looks.
+| Bot | Runs | Wins | Median s | Houses | Mean score | Hit runs | D3 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Novice | 200 | 29.5% | 323.9 | 11.17 | 147835 | 100.0% | 99.5% |
+| Skilled | 200 | 99.5% | 251.8 | 11.99 | 345742 | 100.0% | 100.0% |
+Novice: dead air 17.4%; district lock medians 14.3/16.1/17.5 s; bosses 34.9/33.6/53.5 s.
+Skilled: dead air 19.7%; district lock medians 11.4/10.0/12.5 s; bosses 24.8/28.3/48.6 s.
+FAIL: Novice: timeout

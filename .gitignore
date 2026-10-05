@@ -9,3 +9,6 @@ test-results/
 playwright-report/
 .dev.vars
 artifacts/
+
+# Owner recording is local only. Never publish without separate authorization.
+public/audio/*.mp3

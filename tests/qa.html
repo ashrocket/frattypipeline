@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>PIPELINE browser verification</title>
+    <style>
+      body {
+        margin: 0;
+        background: #15101d;
+        color: #f2ede4;
+        font: 14px monospace;
+      }
+      button {
+        padding: 16px;
+        margin: 10px;
+        background: #b6ff00;
+        color: #0b0a0f;
+        border: 0;
+        font: 900 14px monospace;
+      }
+      pre {
+        white-space: pre-wrap;
+        padding: 14px;
+      }
+      #render {
+        width: 1440px;
+        height: 900px;
+      }
+      iframe {
+        border: 1px solid #ff2e88;
+        display: block;
+      }
+      canvas {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="render-check">RUN RENDER / PIXEL AUDIT</button
+    ><button id="live-check">RUN 60-SECOND INPUT AUDIT</button>
+    <pre id="results">Ready.</pre>
+    <div id="render"></div>
+    <div id="live"></div>
+    <script type="module" src="./qa-browser.js"></script>
+  </body>
+</html>

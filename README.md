@@ -1,121 +1,110 @@
-# Greek Row — Vol. 03
+# PIPELINE
 
-A browser arcade game: a punk skates through a fictional frat neighborhood, throws
-at glowing lawns, and defeats all twelve houses. Three lives, gradual sorority
-transformation, and two progressively stronger punk comebacks. No accounts or
-Spotify integration.
+A player-paced skateboard arena fighter in a fictional twelve-house Greek Row.
+Choose your own look; fight the institution trying to replace it with a uniform.
+No account, Spotify connection, external art, or runtime library is required.
 
-## Play locally
-
-Requires Node 22.12+ (verified with Node 26.5).
+## Run locally
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. This starts Vite and a shared local admission server
-on 127.0.0.1:8797. Override `QUEUE_PORT` if needed. Start through `npm run dev`;
-a standalone static preview cannot reserve a player slot.
+Open http://127.0.0.1:5173. The command starts Vite and the local admission server
+on port 8797. Override `QUEUE_PORT` when another session owns that port. A static
+preview cannot enforce the queue. Never stop another reviewer's development server.
 
-Desktop and landscape use a straight-on, illustrated belt-scroller view. Left/right
-moves along the street; up/down carves into and out of its depth. Portrait phones
-use vertical scrolling, and rotating preserves the run. WASD/arrows or the thumb
-stick steer, F/J throws, Space ollies, Shift pushes for speed, and P/Escape pauses.
-Touch controls include separate THROW, OLLIE and PUSH buttons. Hold throw for
-repeated attacks; ammunition regenerates. The camera waits for an uncleared house
-so missed targets never make a run unwinnable.
+## Play
 
-The skateboard has rolling momentum, push boosts, airborne ollies and landings.
-Clear a street obstacle in the air for a trick bonus and some makeover relief.
-Ride through a coffee stand's marked pickup lane on the ground for a one-time
-coffee reward. Coffee is not a floating pickup. Vinyl replenishes ammunition,
-and lightning grants a shield.
+Move with arrows/WASD, hold **J/F** to charge and release to throw, **K/Space** to
+ollie, **L/Shift** to push, and **P/Escape** to pause. On gamepad: left stick/D-pad,
+A ollie, X/RT throw, B/RB push, Y super, Start pause. Touch supports a move stick
+with a forward flick for PUSH and independent THROW, OLLIE and SUPER touches.
 
-Rush swag and perfume clouds fill a visible **makeover meter**, changing clothes,
-hair and accessories. The meter does not increase just because time passes.
-Coffee and successful skate tricks reduce the makeover. At 100%, a sorority
-transformation plays; the first two punk returns increase damage to 1.5× and 2×.
-The third ends the run. Clearing a district refills ammo and removes twelve
-makeover points. Personal bests stay in local storage.
+There is no auto-scroll or auto-fire. Read orange telegraphs: carve out of HIGH,
+ollie over LOW, push through MID. School the crews to disable lawn sprinklers,
+then aim at the house with the landing reticle. Bottles never hit people. A short
+charge tosses from the lawn half; 400 ms charges a lob; release high in an ollie
+for AIR MAIL. Holding beyond 1.8 seconds wastes a bottle. Beat-timed releases,
+bullseyes and counters reward deliberate play. Full Riot unlocks TOUCH GRASS.
 
-## Add the actual song
+Coffee is a ground-level roll-through pickup; vinyl and clean strip tricks also
+restore ammunition. All five starting looks have identical mechanics. The
+Pipeline overlays tote, quarter-zip, lanyard, blowout and letters. At full meter,
+SORORITY RUSH MODE gives way to a louder comeback, full Riot and a shockwave;
+comebacks never increase damage. A third transformation offers a timed continue.
+A clear with no continues earns 1CC.
 
-The reference repos contain Spotify track ID `33lVSu93J91BDmhfRT7iTA` but no
-recording. Until a file is imported, the game clearly labels its original
-synthesized demo instrumental. It is not the band's recording.
+## Private local song
+
+The game fetches `public/audio/fratty-pipeline.mp3` at runtime. MP3 files are
+ignored by Git. **Do not publish the recording without separate authorization.**
+Vite copies public files into a local build, so a build containing the recording
+must not be deployed without that authorization either.
 
 ```sh
-brew install yt-dlp ffmpeg  # only if missing
 bash scripts/import-song.sh
+npm run check:song
 ```
 
-The default source is the supplied song at
-`https://www.youtube.com/watch?v=lm-CRMQ7jmU`; both supplied links share this video
-ID. Playlist parameters are omitted so the importer selects only this recording.
-Pass an optional URL to choose another source.
+The importer checks yt-dlp >= 2026.08.19 and uses Node when Deno is absent. Upgrade
+with `brew upgrade yt-dlp`, or `pip install -U "yt-dlp[default]"` inside a venv.
+The optional argument is an HTTPS source URL. Existing recordings are backed up.
 
-The script imports one track as `public/audio/fratty-pipeline.mp3` and keeps a
-previous copy if replacing a file. It accepts yt-dlp sources and direct audio,
-not a Spotify metadata URL. Reload the game after importing; playback begins
-with a user gesture and loops. No downloader runs in the web application.
+The authored clock is **183.96 BPM, 0.32616 s/beat, first beat 0.305 s**. It loops
+beats 8–744 during play; the intro starts each run and the ring-out plays on a win.
+`?metronome=1` enables verification clicks. SOUND CHECK measures an eight-tap
+median offset, rejects scattered taps, and is available on first start and pause.
+Music/SFX volume, offset, mute, reduced motion and Beat Assist are persisted.
+Pause and hidden tabs suspend audio; resume includes a four-beat lead-in.
 
-## The 20-player waiting room
+If the file is absent, the title clearly says **SONG FILE MISSING**. Gameplay,
+visual beat and SFX still work, with no synthesized substitute song. Builds warn
+but succeed without the file; `check:song` fails as a separate presence check.
 
-Every normal run requires an anonymous server lease. The twenty-first session
-waits in FIFO order. Production requests all route to one named Cloudflare
-Durable Object, whose persisted state serializes admissions. A tab is a session;
-without accounts there is no claim of identifying unique humans. This is
-admission to single-player runs, not multiplayer synchronization or anti-cheat.
+## Anonymous admission
 
-- Heartbeat: 15 seconds; active lease: 75 seconds; waiting lease: 90 seconds.
-- Abandoned sessions expire; visible waiters retain their place automatically.
-- A two-minute inactive client releases its slot; maximum reservation is 20 minutes.
-- API failure pauses play. Expired clients can rejoin and resume the open run.
-- Leave/page close releases the lease; server expiration covers lost connections.
-- Local development uses one in-memory room. Production persists across restarts.
+Twenty active leases share one FIFO queue. This is admission to single-player
+runs, not multiplayer synchronization or unique-person identification.
 
-JSON POST endpoints are `/api/queue/join`, `/heartbeat`, and `/leave`. Join accepts
-an optional `{token}`; the other routes require it. The token is held in page
-memory, never used as an account, and never logged. Capacity applies to clients
-using the app; browser-delivered code is not a DRM boundary.
+- POST `/api/queue/join`, `/heartbeat`, `/leave` manage anonymous, memory-only tokens.
+- GET `/api/queue/status` returns only activeCount, waitingCount and capacity,
+  with `Cache-Control: max-age=5`. It does not renew leases or mutate the queue.
+- Title/end screens poll status every ten seconds; admitted screens use heartbeats.
+- Heartbeats retry after 2/4/8 seconds. Only HTTP 410 or actual lease expiry pauses.
+- Inactivity releases a slot after two minutes; a 20-minute cap warns a minute early.
+- The production Worker routes every request through the same singleton Durable Object.
 
-## Verify and deploy
+## Verification
 
 ```sh
-npm test
-npm run build
-npx wrangler deploy --dry-run
+npm test                         # unit/regression tests and 30-seed, five-look smoke gate
+npm run build                    # song warning, Vite, built-copy lint
+node scripts/bot-gauntlet.mjs     # reviewer table: 100 seeds × five looks
+npm run gauntlet                  # 200 training + 200 hold-out seeds × five looks
+node scripts/baseline-gate.mjs    # demonstrates that baseline hold-throw fails the gate
 ```
 
-The configured Worker serves `dist/` assets and routes `/api/*` through admission.
-Deploy the Worker and assets together with `npm run deploy` when publication is
-authorized. Static hosting alone cannot enforce a global limit. No deployment
-was performed as part of this rebuild.
+The frozen degenerate policies have a SHA-256 integrity check. Bots use the same
+layout/visibility functions as the renderer and only issue player inputs. The
+full gate checks win/score/pacing targets, fairness, caps, musical impact timing,
+termination and cosmetic parity. `tests/qa.html` provides real-browser 128-pixel
+uniform-layer tests, saturated draw-call audits and a 60-second DOM-input run.
+Use `?hitboxes=1` for projected base ellipses. Browser evidence belongs in
+`docs/iteration-1/`; desktop emulation does not replace physical-device testing.
 
-Focused tests cover the playable win/loss loop, transformations, frame-rate
-stability, queue concurrency, expiration, FIFO, persistence and HTTP validation.
-Browser QA covers desktop, 390×844 portrait, and 844×390 landscape layouts,
-throwing, rotation, pause, and the waiting-room flow. Emulated viewport QA does
-not replace testing touch feel and performance on physical phones.
+## Code map
 
-## Project map and recovery
+- `src/sim/`: seeded 60 Hz state machine, player, throwing, enemies, houses, beat and input queue.
+- `src/data/`: tuning, looks, fictional houses, copy and compact authored beatmap.
+- `src/layout.js`: shared pure projection and visible-entity perception.
+- `src/render/`: cached scenery, layer-stack sprites, canvas HUD, effects and measured renderer.
+- `src/main.js`, `controls.js`, `session.js`: fixed-step loop, DOM/gamepad/touch edges and leases.
+- `src/audio.js`: Web Audio clock, song routing, calibration and bounded synthesized SFX.
+- `src/model.js`, `renderer-flat.js`: public entry points; the unused Three.js renderer is removed.
+- `server/`, `worker/`: shared admission rules and HTTP handling.
 
-The [adversarial design panel brief and prioritized wishlist](docs/GAME_DESIGN_REVIEW.md)
-includes reproducible balance measurements, review roles, and proposed experiments.
-Run `node scripts/balance-probe.mjs` to repeat the input-policy comparison.
-
-- `src/model.js`: deterministic game simulation.
-- `src/renderer-flat.js`: active Canvas 2D scenery, depth sorting, skating animation and effects.
-- `src/renderer.js`: earlier isometric experiment, retained for reference and not imported.
-- `src/main.js`: controls, HUD and admission lifecycle.
-- `src/audio.js`: local song playback and labeled demo music.
-- `server/`: shared queue rules, HTTP boundary, local adapter.
-- `worker/index.mjs`, `wrangler.jsonc`: production admission and assets.
-- `tests/`: focused regression checks.
-
-Explored `grouchobarks`, `frattypipeline`, and `bandmusicgames.party`. The original
-vertical game survives in GrouchoBarks history at `9b8b9e2:fratty-pipeline/`;
-the umbrella repo has uninitialized game submodules. The existing `js/`, design
-handoff, and ZIP in this repository remain historical references. The new entry
-point loads only `src/main.js`; historical Spotify files are not shipped by Vite.
+`js/` and `design_handoff_fratty_pipeline/` remain legacy reference material and
+are not loaded by the game. Commit, push, merge and deployment require separate
+user authorization; iteration 1 is intentionally left uncommitted for review.

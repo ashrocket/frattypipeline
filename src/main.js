@@ -1,185 +1,675 @@
-import { GameModel, DISTRICTS } from './model.js';
+import { GameModel, seededRandom } from './model.js';
 import { WorldRenderer } from './renderer-flat.js';
 import { GameAudio } from './audio.js';
-const $ = id => document.getElementById(id);
-const model = new GameModel();
-const audio = new GameAudio(text => { $('track-label').textContent = text; });
-let world;
-try { world = new WorldRenderer($('world')); }
-catch (error) { $('fatal').hidden = false; $('fatal-message').textContent = 'The game graphics couldn’t start. Reload or try a current browser.'; console.error(error); }
-const safeStore = { get(key) { try { return localStorage.getItem(key); } catch { return null; } }, set(key,value) { try { localStorage.setItem(key,value); } catch { /* Optional local scores. */ } } };
-let best = Number(safeStore.get('fratty-pipeline:v3:best')) || 0;
-$('title-best').textContent = String(best).padStart(6,'0');
-let session = null, token = null, leaseUntil = 0, requestPending = false, queueTimer = null;
-let operation = 0, resumePhase = 'playing', pendingEntry = false;
-let lastActivity = performance.now(), previousFocus = null, dialogAction = null, secondaryAction = null;
-let toastTimer, lastHud = 0, lastFrame = performance.now();
-const keys = new Set(), touch = { x:0,y:0,fire:false,dash:false,jump:false };
-const isTouch = () => matchMedia('(pointer:coarse)').matches || navigator.maxTouchPoints > 0 || innerWidth <= 700 || (innerWidth <= 1000 && innerHeight <= 550);
-function resize() {
-  model.portrait = isTouch() && innerHeight > innerWidth;
-  document.body.dataset.orientation = model.portrait ? 'portrait' : 'landscape';
-  world?.resize();
-  $('touch-controls').hidden = !isTouch() || !['playing','paused','transform'].includes(model.phase);
+import { Session } from './session.js';
+import { KEYMAP, gamepadState, radial } from './controls.js';
+import { STEP, BEAT_S } from './data/tuning.js';
+import { S } from './data/strings.js';
+import { LOOKS, HAIR_COLORS } from './data/looks.js';
+const $ = (id) => document.getElementById(id);
+const storage = {
+  get(key, fallback) {
+    try {
+      return JSON.parse(localStorage.getItem(`pipeline:${key}`)) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  },
+  set(key, value) {
+    try {
+      localStorage.setItem(`pipeline:${key}`, JSON.stringify(value));
+    } catch {
+      /* Storage is optional. */
+    }
+  },
+};
+for (const node of document.querySelectorAll('[data-copy]'))
+  node.textContent = S[node.dataset.copy] ?? S.art[node.dataset.copy];
+for (const node of document.querySelectorAll('[data-aria]'))
+  node.setAttribute('aria-label', S.aria[node.dataset.aria]);
+const settings = storage.get('settings', {
+  music: 1,
+  sfx: 0.8,
+  offset: 0,
+  muted: false,
+  reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+  beatAssist: false,
+});
+const model = new GameModel(
+  seededRandom(Number(new URLSearchParams(location.search).get('seed')) || Date.now()),
+  { look: storage.get('look', 4), hair: storage.get('hair', 0) },
+);
+const world = new WorldRenderer($('world'));
+world.reduced = settings.reduced;
+model.beatAssist = settings.beatAssist;
+const audio = new GameAudio((label) => {
+  $('track-label').textContent = label;
+  $('track-label').classList.toggle('missing', label === S.missing);
+}, settings);
+const keys = new Set(),
+  deviceHeld = { keyboard: {}, touch: {}, gamepad: {} },
+  edges = [];
+let activeDevice = 'keyboard',
+  touchMove = { x: 0, z: 0 },
+  pad = {},
+  lastPad = {},
+  lastTime = performance.now(),
+  accumulator = 0,
+  tickStamp = lastTime;
+let count = { activeCount: 0, waitingCount: 0, capacity: 20 },
+  dialogAction = null,
+  secondaryAction = null,
+  previousFocus = null,
+  lastAria = 0,
+  lastPhase = 'title',
+  lastPoll = 0,
+  resumePhase = 'playing',
+  resumeAt = null,
+  queuedHidden = false,
+  calibration = false;
+let sessionEnded = false,
+  lateErrors = [],
+  pendingJoin = false;
+const touch = () =>
+  matchMedia('(pointer:coarse)').matches || navigator.maxTouchPoints > 0 || innerWidth < 900;
+function updateCount(result) {
+  count = { ...count, activeCount: result.activeCount, capacity: result.capacity };
+  const label = `${count.activeCount} / ${count.capacity} ${S.hud.playing}`;
+  if ($('server-status').textContent !== label) $('server-status').textContent = label;
+  world.count = count;
 }
-addEventListener('resize',resize); resize();
-function showDialog({kicker='GREEK ROW',title,body,primary='CONTINUE ↗',action,secondary,back}) {
+async function request(action, data) {
+  const response = await fetch(`/api/queue/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    signal: AbortSignal.timeout(7000),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    const e = new Error(result.message);
+    e.status = response.status;
+    throw e;
+  }
+  return result;
+}
+const session = new Session({
+  request,
+  onCount: updateCount,
+  onAdmitted: enterRun,
+  onWaiting: (r) =>
+    showDialog(
+      S.queue,
+      `${S.queueBody}\n${r.position} ${S.inLine} · ${r.activeCount} / 20 ${S.hud.playing}`,
+      S.wait,
+      null,
+      S.leave,
+      leave,
+    ),
+  onExpired: () => {
+    pause();
+    showDialog(S.expired, S.queueBody, S.retry, join, S.leave, leave);
+  },
+  onWarning: () =>
+    world.event(
+      { type: 'timeover', text: S.capWarning, sub: S.capSub, x: model.player.x, z: model.player.z },
+      model,
+    ),
+  releaseIfIdle,
+});
+function clearInput() {
+  keys.clear();
+  edges.length = 0;
+  for (const source of Object.values(deviceHeld))
+    for (const key of Object.keys(source)) source[key] = false;
+  model.move = { x: 0, z: 0 };
+  model.held = {};
+  model.charge = null;
+  touchMove = { x: 0, z: 0 };
+  $('stick').style.transform = '';
+}
+function setScreen() {
+  const playing = model.phase !== 'title';
+  document.body.dataset.playing = String(playing);
+  $('app').dataset.screen = playing ? 'game' : 'title';
+  $('title-screen').hidden = playing;
+  $('pause-btn').hidden = !playing;
+  $('mobile-pause').hidden = !playing || !touch();
+  $('touch-controls').hidden =
+    !playing || !touch() || ['won', 'lost', 'continue', 'paused'].includes(model.phase);
+  world.resize();
+}
+function showDialog(title, body, primary, action, secondary = S.leave, back = leave) {
   if ($('dialog').hidden) previousFocus = document.activeElement;
-  $('dialog-kicker').textContent=kicker; $('dialog-title').textContent=title; $('dialog-body').innerHTML=body;
-  $('dialog-primary').textContent=primary; $('dialog-primary').disabled=!action; dialogAction=action;
-  $('dialog-secondary').hidden=!secondary; $('dialog-secondary').textContent=secondary || ''; secondaryAction=back;
-  $('dialog').hidden=false; ($('dialog-primary').disabled?$('dialog-secondary'):$('dialog-primary')).focus(); clearInput();
+  $('dialog-title').textContent = title;
+  $('dialog-body').textContent = body;
+  $('dialog-primary').textContent = primary;
+  $('dialog-primary').disabled = !action;
+  $('dialog-secondary').textContent = secondary;
+  $('dialog-secondary').hidden = !back;
+  $('settings').hidden = true;
+  dialogAction = action;
+  secondaryAction = back;
+  $('dialog').hidden = false;
+  (action ? $('dialog-primary') : $('dialog-secondary')).focus();
+  clearInput();
 }
-function hideDialog() { $('dialog').hidden=true; previousFocus?.focus?.(); }
-$('dialog-primary').addEventListener('click',()=>dialogAction?.());
-$('dialog-secondary').addEventListener('click',()=>secondaryAction?.());
-function clearInput() { keys.clear(); touch.x=0;touch.y=0;touch.fire=false;touch.dash=false;touch.jump=false;$('stick').style.transform=''; }
-function notify(text) { if (!text) return; $('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2200); }
-function setGameScreen(active) { $('app').dataset.screen=active?'game':'title';$('title-screen').hidden=active;$('hud').hidden=!active;$('pause-btn').hidden=!active;resize(); }
-async function request(path,data={}) {
-  const requestStarted=performance.now();
-  const response = await fetch(`/api/queue/${path}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),signal:AbortSignal.timeout(7000)});
-  const result=await response.json(); if(!response.ok) {const error=new Error(result.message || result.error || 'The door is temporarily offline.'); error.status=response.status;throw error;} return {...result,requestStarted};
+function hideDialog() {
+  $('dialog').hidden = true;
+  previousFocus?.focus?.();
 }
-function acceptSession(result) {
-  session=result;token=result.token;leaseUntil=result.requestStarted+Math.max(0,result.leaseSeconds*1000-2000);
-  $('server-status').innerHTML=`<i></i>${result.activeCount} / ${result.capacity} ON THE ROW`;
-  clearTimeout(queueTimer);queueTimer=setTimeout(heartbeat, result.heartbeatSeconds*1000);
-}
-function showQueue() {
-  showDialog({kicker:'THE 20 PLAYER CLUB',title:'HOLD YOUR SPOT.',body:`<div class="queue-count">${session.position}<small>YOUR PLACE<br>IN THE QUEUE</small></div><p>Greek Row is at capacity. Keep this tab open and we’ll let you in automatically when a spot opens.</p><p><b>${session.activeCount} / 20 playing now.</b> No signup. First in, first out.</p>`,primary:'WAITING FOR YOUR TURN…',secondary:'LEAVE THE QUEUE',back:leave});
-}
+$('dialog-primary').onclick = () => dialogAction?.();
+$('dialog-secondary').onclick = () => secondaryAction?.();
 function enterRun() {
-  if(document.hidden) {pendingEntry=true;return;}
-  pendingEntry=false;hideDialog();setGameScreen(true);lastActivity=performance.now();
-  if(['title','won','lost'].includes(model.phase)) {model.reset();resize();model.start();}
-  else if(model.phase==='paused') {model.phase=resumePhase;$('transformation').hidden=resumePhase!=='transform';}
-  resize();updateHud();
-}
-function suspendRun() {
-  if(['playing','transform'].includes(model.phase)){resumePhase=model.phase;model.phase='paused';}
-  $('transformation').hidden=true;clearInput();
-}
-function connectionProblem(expired=false) {
-  suspendRun();
-  showDialog({kicker:expired?'YOUR SPOT HAS EXPIRED':'THE DOOR LOST CONNECTION',title:expired?'BACK TO THE LINE.':'HANG TIGHT.',body:`<p>${expired?'Your run is paused. Rejoin to reserve another spot and continue.':'Your run is paused while we reconnect to the waiting room.'}</p><p>Progress stays here while this tab is open.</p>`,primary:expired?'REJOIN ↗':'RECONNECT ↗',action:join,secondary:'BACK TO TITLE',back:leave});
+  if (document.hidden) {
+    queuedHidden = true;
+    return;
+  }
+  queuedHidden = false;
+  audio.unlock();
+  sessionEnded = false;
+  if (model.phase === 'paused' && model.time > 0) {
+    resume();
+    return;
+  }
+  hideDialog();
+  model.reset();
+  model.beatAssist = settings.beatAssist;
+  model.start();
+  audio.startRun();
+  lastTime = performance.now();
+  tickStamp = lastTime;
+  accumulator = 0;
+  setScreen();
 }
 async function join() {
-  if(requestPending)return;requestPending=true;const ticket=++operation;audio.start();
-  showDialog({kicker:'THE 20 PLAYER CLUB',title:'CHECKING THE DOOR.',body:'<p>Reserving your spot on Greek Row…</p>',primary:'CONNECTING…',secondary:'BACK',back:leave});
+  if (pendingJoin) return;
+  pendingJoin = true;
+  audio.unlock();
+  showDialog(S.checking, S.queueBody, S.connecting, null, S.leave, leave);
   try {
-    const result=await request('join',token?{token}:{});
-    if(ticket!==operation){await request('leave',{token:result.token});return;}acceptSession(result);
-    if(result.status==='active')enterRun();else showQueue();
-  } catch(error) {
-    if(ticket!==operation)return;
-    showDialog({kicker:'THE DOOR IS TAKING A BREAK',title:'CAN’T CONNECT YET.',body:'<p>The waiting room is unavailable. Your run will start as soon as we can reserve a spot.</p>',primary:'TRY AGAIN ↗',action:join,secondary:'BACK',back:leave});
-  } finally {if(ticket===operation)requestPending=false;}
+    await session.join();
+  } catch (error) {
+    console.error('Admission:', error);
+    showDialog(S.offline, S.queueBody, S.retry, join, S.leave, leave);
+  } finally {
+    pendingJoin = false;
+  }
 }
-async function heartbeat() {
-  if(!token)return;
-  if(document.hidden) {queueTimer=setTimeout(heartbeat,5000);return;}
-  if(session?.status==='active'&&performance.now()-lastActivity>120000) {const releasing=release();connectionProblem(true);await releasing;return;}
-  if(requestPending) {queueTimer=setTimeout(heartbeat,1000);return;}
-  requestPending=true;const ticket=++operation;
-  try {
-    const wasWaiting=session?.status==='waiting',result=await request('heartbeat',{token});
-    if(ticket!==operation){await request('leave',{token:result.token});return;}acceptSession(result);
-    if(result.status==='active'&&(wasWaiting||pendingEntry))enterRun();else if(result.status==='waiting')showQueue();
-  } catch(error) {
-    if(ticket!==operation)return;
-    if(error.status===410){token=null;session=null;}connectionProblem(error.status===410);
-  } finally {if(ticket===operation)requestPending=false;}
+function start() {
+  audio.unlock();
+  if (!storage.get('soundChecked', false)) {
+    soundCheck(join);
+  } else join();
 }
-async function release() {
-  ++operation;requestPending=false;pendingEntry=false;const old=token;token=null;session=null;leaseUntil=0;clearTimeout(queueTimer);
-  $('server-status').innerHTML='<i></i>20 PLAYER CLUB';
-  if(old)try{await request('leave',{token:old});}catch{ /* Server lease expires independently. */ }
+async function leave() {
+  const leaving = session.leave();
+  model.reset();
+  clearInput();
+  audio.pause(0);
+  hideDialog();
+  setScreen();
+  await leaving;
+  pollCount();
 }
-async function leave() {const releasing=release();model.reset();resize();setGameScreen(false);hideDialog();$('transformation').hidden=true;await releasing;}
 function pause() {
-  if(!['playing','transform'].includes(model.phase))return;suspendRun();
-  showDialog({kicker:'TAKE A BREATHER',title:'STILL A PUNK.',body:'<p>Your run is paused. Your spot stays reserved while you’re here; inactive spots return to the queue after two minutes.</p>',primary:'BACK TO THE RIOT ↗',action:resume,secondary:'END RUN',back:leave});
+  if (!['playing', 'transform', 'countin', 'vs', 'ko', 'continue'].includes(model.phase)) return;
+  resumePhase = model.phase;
+  model.phase = 'paused';
+  audio.pause(model.beat);
+  showDialog(S.pause, S.controls, S.resume, resume, S.leave, leave);
+  renderSettings();
+  setScreen();
+}
+// Runs from the frame loop and before every heartbeat, so hidden tabs release too.
+function releaseIfIdle() {
+  if (!session.token || !session.idle() || ['won', 'lost', 'continue'].includes(model.phase))
+    return false;
+  session.leave();
+  pause();
+  showDialog(S.expired, S.queueBody, S.retry, join, S.leave, leave);
+  return true;
 }
 async function resume() {
-  audio.start();lastActivity=performance.now();
-  if(!token || performance.now()>=leaseUntil) {connectionProblem(true);return;}
-  if(requestPending)return;
-  requestPending=true;const ticket=++operation;
-  try { const result=await request('heartbeat',{token});if(ticket!==operation){await request('leave',{token:result.token});return;}acceptSession(result);if(result.status==='active'){hideDialog();model.phase=resumePhase;$('transformation').hidden=resumePhase!=='transform';}else showQueue(); }
-  catch(error){if(ticket===operation)connectionProblem(error.status===410);}finally{if(ticket===operation)requestPending=false;}
-}
-function how() {
-  showDialog({kicker:'A CRASH COURSE IN BAD INFLUENCE',title:'HOW TO RIOT.',body:'<div class="instructions"><div><strong>01</strong><span><b>CARVE THROUGH THE ROW.</b>Left/right rolls along the street. Up/down moves into and out of depth. Use WASD, arrows, or the thumb stick. Space ollies; Shift pushes for speed.</span></div><div><strong>02</strong><span><b>GLOWING LAWN? LIGHT IT UP.</b>Hold F / J or THROW. Bottles aim at the nearest lawn in range. Ammo refills. Clear all 12 houses to win.</span></div><div><strong>03</strong><span><b>THE MAKEOVER ISN’T THE END.</b>Rush swag and perfume clouds fill the makeover meter, adding preppy clothes. A full makeover turns you into a sorority girl. Your first two punk comebacks hit harder; the third ends the run.</span></div><div><strong>✦</strong><span><b>KEEP YOUR SCENE ALIVE.</b>Ride through a coffee stand’s pickup lane to undo some makeover. Ollie over trouble for trick points. Vinyl refills ammo; lightning gives a shield. Chain houses for up to ×8 points.</span></div></div>',primary:'I’M IN ↗',action:()=>{hideDialog();join();},secondary:'BACK',back:hideDialog});
-}
-$('how-btn').addEventListener('click',how);$('start-btn').addEventListener('click',join);$('pause-btn').addEventListener('click',pause);
-$('sound-btn').addEventListener('click',()=>{const muted=audio.toggle();$('sound-btn').textContent=muted?'♪̸':'♫';$('sound-btn').setAttribute('aria-pressed',String(!muted));});
-function updateHud() {
-  $('score').textContent=String(model.score).padStart(6,'0');
-  $('lives').innerHTML=Array.from({length:3},(_,i)=>`<span style="display:inline;font-size:inherit;letter-spacing:inherit" class="${i>=model.lives?'spent':''}">✦</span>`).join(' ');
-  $('lives').setAttribute('aria-label',`${model.lives} punk lives`);
-  $('combo').textContent=`×${model.combo}`;$('combo-fill').style.width=`${model.comboTime*10}%`;
-  $('burned').textContent=model.burned;
-  const district=Math.min(2,Math.floor(model.burned/4));$('district').textContent=`0${district+1} / ${DISTRICTS[district]}`;
-  $('house-progress').innerHTML=model.houses.map(h=>`<i class="${h.burned?'down':''}" title="${h.name}${h.burned?' — down':''}"></i>`).join('');
-  const makeover=model.player.pipeline;$('pressure-fill').style.width=`${makeover}%`;$('pressure-number').textContent=`${Math.floor(makeover)}%`;
-  $('identity').textContent=makeover>=100?'SORORITY GIRL':makeover>=70?'ONE OF THE SISTERS?':makeover>=35?'THE PREPPY CREEP':model.player.level===2?'MAXIMUM PUNK':model.player.level===1?'BACK LOUDER':'PUNK, UNFILTERED';
-  $('ammo').textContent=Array.from({length:5},(_,i)=>i<Math.floor(model.ammo)?'●':'○').join(' ');
-  $('dash-state').textContent=model.player.jumpHeight>0.05?'AIRBORNE':model.player.dashing>0?'PUSHING':model.dashCooldown?`${model.dashCooldown.toFixed(1)}s`:'ROLLING ↗';
-  const target=model.houses[model.targetId];
-  $('target-name').textContent=target&&!target.burned?target.name.toUpperCase():'NEXT HOUSE AHEAD';
-  $('target-health').textContent=target&&!target.burned?`${Math.ceil(target.hp)} HITS LEFT · ${isTouch()?'HOLD THROW':'HOLD F TO THROW'}`:'Keep moving. Your next target will light up.';
-}
-function endRun(won) {
-  best=Math.max(best,model.score);safeStore.set('fratty-pipeline:v3:best',String(best));$('title-best').textContent=String(best).padStart(6,'0');
-  release();$('touch-controls').hidden=true;$('pause-btn').hidden=true;
-  const rank=won?(model.lives===3?'ROW LEGEND':model.player.level===2?'MAXIMUM PUNK':'SCENE HERO'):'STILL AN OUTSIDER';
-  showDialog({kicker:rank,title:won?'THE ROW IS YOURS.':'NEVER GO QUIET.',body:`<p>${won?'Every chapter closed. Every lawn lit. You made it through the pipeline on your own terms.':'Three lives, a few questionable makeovers. Greek Row is still standing. Go back louder.'}</p><div class="result-stats"><div><span>SCORE</span><strong>${model.score.toLocaleString()}</strong></div><div><span>FRATS DOWN</span><strong>${model.burned} / 12</strong></div><div><span>BEST</span><strong>${best.toLocaleString()}</strong></div></div>`,primary:'ONE MORE RIOT ↗',action:join,secondary:'BACK TO TITLE',back:leave});
-}
-function input() {
-  const sx=(keys.has('ArrowRight')||keys.has('KeyD')?1:0)-(keys.has('ArrowLeft')||keys.has('KeyA')?1:0)+touch.x;
-  const sy=(keys.has('ArrowDown')||keys.has('KeyS')?1:0)-(keys.has('ArrowUp')||keys.has('KeyW')?1:0)+touch.y;
-  return {x:model.portrait?-sy:sx,z:model.portrait?sx:sy,fire:keys.has('KeyF')||keys.has('KeyJ')||touch.fire,push:keys.has('ShiftLeft')||keys.has('ShiftRight')||touch.dash,jump:keys.has('Space')||touch.jump};
-}
-addEventListener('keydown',e=>{
-  lastActivity=performance.now();
-  if(!$('dialog').hidden) {
-    if(e.code==='Tab') {const buttons=[...$('dialog').querySelectorAll('button:not([hidden]):not(:disabled)')];if(!buttons.length)return;const first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
-    if(e.code==='Escape'&&model.phase==='paused')resume();return;
+  if (!session.token || session.expired || performance.now() >= session.leaseUntil) {
+    join();
+    return;
   }
-  if(e.code==='KeyP'||e.code==='Escape'){pause();return;}
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyF','KeyJ','KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight'].includes(e.code)&&model.phase==='playing'){e.preventDefault();keys.add(e.code);if(!e.repeat){if(['KeyF','KeyJ'].includes(e.code))model.throwBottle();if(e.code==='Space')model.ollie();if(['ShiftLeft','ShiftRight'].includes(e.code))model.push();}}
+  await audio.resume(model.beat, model.projectiles);
+  resumeAt = model.beat;
+  // Remain paused while the four-beat musical lead-in plays.
+  showDialog(S.brand, S.hud.count, S.resume, null, S.leave, leave);
+}
+function persistSettings() {
+  audio.settings = { ...audio.settings, ...settings };
+  audio.applySettings();
+  $('sound-btn').setAttribute('aria-pressed', String(settings.muted));
+  world.reduced = settings.reduced;
+  model.beatAssist = settings.beatAssist;
+  storage.set('settings', settings);
+}
+function renderSettings() {
+  const root = $('settings');
+  root.replaceChildren();
+  root.hidden = false;
+  for (const key of ['music', 'sfx', 'offset']) {
+    const label = document.createElement('label');
+    label.textContent = S[key];
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = key === 'offset' ? -0.4 : 0;
+    input.max = key === 'offset' ? 0.4 : 1;
+    input.step = 0.01;
+    input.value = settings[key];
+    input.setAttribute('aria-label', S[key]);
+    input.oninput = () => {
+      settings[key] = Number(input.value);
+      persistSettings();
+    };
+    label.append(input);
+    root.append(label);
+  }
+  for (const [key, title] of [
+    ['muted', S.mute],
+    ['reduced', S.reduced],
+    ['beatAssist', S.assist],
+  ]) {
+    const label = document.createElement('label');
+    label.textContent = title;
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = settings[key];
+    input.onchange = () => {
+      settings[key] = input.checked;
+      persistSettings();
+    };
+    label.append(input);
+    root.append(label);
+  }
+  const check = document.createElement('button');
+  check.textContent = S.soundCheck;
+  check.onclick = () =>
+    soundCheck(() => {
+      showDialog(S.pause, S.controls, S.resume, resume, S.leave, leave);
+      renderSettings();
+    });
+  root.append(check);
+}
+function soundCheck(done) {
+  audio.unlock();
+  calibration = true;
+  showDialog(
+    S.soundCheck,
+    S.calibrationHelp,
+    S.tap,
+    () => {},
+    S.skip,
+    () => {
+      calibration = false;
+      storage.set('soundChecked', true);
+      done();
+    },
+  );
+  audio.beginCalibration();
+  dialogAction = () => {
+    const result = audio.tapCalibration(performance.now());
+    const n = audio.calibrationErrors.length;
+    $('dialog-body').textContent = `${S.calibrationHelp}\n${n} / 8`;
+    if (result) {
+      calibration = false;
+      if (result.accepted) {
+        settings.offset = result.offset;
+        persistSettings();
+        storage.set('soundChecked', true);
+        showDialog(
+          S.soundCheck,
+          `${S.calibrationSaved} ${Math.round(result.offset * 1000)} ms`,
+          S.start,
+          done,
+          S.soundCheck,
+          () => soundCheck(done),
+        );
+      } else
+        showDialog(
+          S.soundCheck,
+          S.calibrationReject,
+          S.soundCheck,
+          () => soundCheck(done),
+          S.skip,
+          done,
+        );
+    }
+  };
+}
+$('start-btn').onclick = start;
+$('pause-btn').onclick = pause;
+$('mobile-pause').onclick = pause;
+$('sound-btn').onclick = () => {
+  audio.unlock();
+  settings.muted = !settings.muted;
+  persistSettings();
+  $('sound-btn').setAttribute('aria-pressed', String(settings.muted));
+};
+$('how-btn').onclick = () =>
+  showDialog(S.how, S.howBody, S.start, start, S.leave, () => hideDialog());
+function picker() {
+  for (const [id, list, selected, storeKey] of [
+    ['look-options', LOOKS, model.look, 'look'],
+    ['hair-options', HAIR_COLORS, model.hair, 'hair'],
+  ]) {
+    $(id).replaceChildren();
+    list.forEach((item, index) => {
+      const button = document.createElement('button');
+      button.setAttribute('aria-pressed', String(index === selected));
+      button.setAttribute(
+        'aria-label',
+        id === 'look-options' ? item.name : `${S.aria.hair} ${index + 1}`,
+      );
+      if (id === 'look-options') button.textContent = item.name;
+      else button.style.background = item;
+      button.onclick = () => {
+        model[storeKey] = index;
+        storage.set(storeKey, index);
+        picker();
+      };
+      $(id).append(button);
+    });
+  }
+}
+picker();
+function edge(source, action, down, stamp = performance.now()) {
+  const before = Object.values(deviceHeld).some((s) => s[action]);
+  deviceHeld[source][action] = down;
+  const after = Object.values(deviceHeld).some((s) => s[action]);
+  if (before === after) return;
+  activeDevice = source;
+  session.lastActivity = performance.now();
+  const beat = audio.beatAt(stamp, true);
+  if (model.phase === 'vs' && after) {
+    edges.push({ action: 'skip', down: true, beat });
+    return;
+  }
+  edges.push({ action, down: after, beat, rawBeat: audio.beatAt(stamp) });
+  if (action === 'throw' && !after) {
+    const error = (beat - Math.round(beat)) * BEAT_S;
+    lateErrors.push(error);
+    lateErrors = lateErrors.slice(-8);
+    if (lateErrors.length === 8 && lateErrors.every((x) => x > 0.07))
+      world.event(
+        {
+          type: 'hint',
+          text: S.soundCheck,
+          sub: S.bluetooth,
+          x: model.player.x,
+          z: model.player.z,
+        },
+        model,
+      );
+  }
+}
+addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  if (
+    !['INPUT', 'BUTTON'].includes(document.activeElement?.tagName) &&
+    ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)
+  )
+    e.preventDefault();
+  if (e.code === 'Escape' || e.code === 'KeyP') {
+    if (model.phase === 'paused') resume();
+    else pause();
+    return;
+  }
+  if (!$('dialog').hidden) return;
+  keys.add(e.code);
+  session.lastActivity = performance.now();
+  if (KEYMAP[e.code]) edge('keyboard', KEYMAP[e.code], true, e.timeStamp);
 });
-addEventListener('keyup',e=>keys.delete(e.code));
-addEventListener('pointerdown',()=>{lastActivity=performance.now();});addEventListener('pointermove',()=>{if(touch.x||touch.y)lastActivity=performance.now();});
-addEventListener('blur',()=>{clearInput();pause();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){pause();clearInput();}else if(token){lastActivity=performance.now();heartbeat();}});
-addEventListener('pagehide',()=>{if(token)navigator.sendBeacon('/api/queue/leave',new Blob([JSON.stringify({token})],{type:'application/json'}));});
-let joyId=null,origin={x:0,y:0};
-$('joystick').addEventListener('pointerdown',e=>{joyId=e.pointerId;origin={x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture(e.pointerId);});
-$('joystick').addEventListener('pointermove',e=>{if(e.pointerId!==joyId)return;const dx=e.clientX-origin.x,dy=e.clientY-origin.y,scale=Math.max(1,Math.hypot(dx,dy)/34);touch.x=dx/scale/34;touch.y=dy/scale/34;$('stick').style.transform=`translate(${dx/scale}px,${dy/scale}px)`;lastActivity=performance.now();});
-for(const ev of ['pointerup','pointercancel','lostpointercapture'])$('joystick').addEventListener(ev,()=>{joyId=null;touch.x=0;touch.y=0;$('stick').style.transform='';});
-for(const [id,property] of [['fire-touch','fire'],['dash-touch','dash'],['ollie-touch','jump']]){
-  $(id).addEventListener('pointerdown',e=>{e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);touch[property]=true;if(property==='fire')model.throwBottle();else if(property==='jump')model.ollie();else model.push();});
-  for(const ev of ['pointerup','pointercancel','lostpointercapture'])$(id).addEventListener(ev,()=>{touch[property]=false;});
-}
-function frame(now){
-  const dt=Math.min(.05,(now-lastFrame)/1000);lastFrame=now;
-  if(['playing','transform'].includes(model.phase)&&(!session||session.status!=='active'||now>=leaseUntil)){connectionProblem(true);}
-  const controls=input();if(model.phase==='playing'&&(controls.x||controls.z||controls.fire||controls.push||controls.jump))lastActivity=now;
-  model.tick(dt,controls);
-  for(const event of model.drainEvents()){
-    audio.effect(event.type);
-    if(['impact','burn','pickup','smash','coffee','trick'].includes(event.type))world?.burst(event.x,event.z,['pickup','coffee','trick'].includes(event.type)?0xdcf866:0xff713c,event.type==='burn'?40:14);
-    if(event.type==='transform'){$('transformation').hidden=false;$('transform-copy').textContent=model.lives>1?'The comeback is going to be louder.':'One last makeover. The scene will remember you.';}
-    else if(event.type==='reborn'){$('transformation').hidden=true;notify(event.text);}
-    else if(event.type==='won'||event.type==='lost'){$('transformation').hidden=true;endRun(event.type==='won');}
-    else notify(event.text);
+addEventListener('keyup', (e) => {
+  keys.delete(e.code);
+  if (KEYMAP[e.code]) {
+    const action = KEYMAP[e.code];
+    const still = [...keys].some((key) => KEYMAP[key] === action);
+    edge('keyboard', action, still, e.timeStamp);
   }
-  world?.render(model,dt);audio.tick();
-  if(now-lastHud>90){updateHud();lastHud=now;}
+});
+for (const [id, action] of [
+  ['fire-touch', 'throw'],
+  ['ollie-touch', 'ollie'],
+  ['super-touch', 'super'],
+]) {
+  const node = $(id),
+    pointers = new Set();
+  node.onpointerdown = (e) => {
+    e.preventDefault();
+    node.setPointerCapture(e.pointerId);
+    pointers.add(e.pointerId);
+    edge('touch', action, true, e.timeStamp);
+  };
+  const release = (e) => {
+    pointers.delete(e.pointerId);
+    edge('touch', action, pointers.size > 0, e.timeStamp);
+  };
+  node.onpointerup = release;
+  node.onpointercancel = release;
+  node.onlostpointercapture = release;
+}
+let stickPointer = null,
+  stickStart = null;
+$('joystick').onpointerdown = (e) => {
+  e.preventDefault();
+  stickPointer = e.pointerId;
+  stickStart = { x: e.clientX, y: e.clientY, time: e.timeStamp, pushed: false };
+  $('joystick').setPointerCapture(e.pointerId);
+};
+$('joystick').onpointermove = (e) => {
+  if (e.pointerId !== stickPointer) return;
+  const dx = e.clientX - stickStart.x,
+    dy = e.clientY - stickStart.y;
+  const portrait = innerHeight > innerWidth;
+  touchMove = radial((portrait ? -dy : dx) / 35, (portrait ? dx : dy) / 35, 0.12);
+  $('stick').style.transform =
+    `translate(${Math.max(-28, Math.min(28, dx))}px,${Math.max(-28, Math.min(28, dy))}px)`;
+  session.lastActivity = performance.now();
+  activeDevice = 'touch';
+  if (!stickStart.pushed && e.timeStamp - stickStart.time < 220 && (portrait ? -dy : dx) > 24) {
+    edge('touch', 'push', true, e.timeStamp);
+    edge('touch', 'push', false, e.timeStamp + 1);
+    stickStart.pushed = true;
+  }
+};
+const releaseStick = (e) => {
+  if (e.pointerId === stickPointer) {
+    stickPointer = null;
+    touchMove = { x: 0, z: 0 };
+    $('stick').style.transform = '';
+  }
+};
+$('joystick').onpointerup = releaseStick;
+$('joystick').onpointercancel = releaseStick;
+function pollGamepad(now) {
+  pad = gamepadState([...(navigator.getGamepads?.() ?? [])].find(Boolean));
+  for (const action of ['throw', 'ollie', 'push', 'super'])
+    if (pad[action] !== lastPad[action]) edge('gamepad', action, pad[action], now);
+  if (pad.pause && !lastPad.pause) {
+    if (model.phase === 'paused') resume();
+    else pause();
+  }
+  if (Math.abs(pad.x) + Math.abs(pad.z) > 0) session.lastActivity = now;
+  lastPad = pad;
+}
+let portrait = innerHeight > innerWidth;
+addEventListener('resize', () => {
+  const next = innerHeight > innerWidth;
+  if (next !== portrait) pause();
+  portrait = next;
+  world.resize();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    pause();
+    audio.pause(model.beat);
+  } else if (queuedHidden) {
+    session.heartbeat().then((confirmed) => {
+      if (confirmed && session.result?.status === 'active') enterRun();
+    });
+  }
+});
+audio.onInterrupted = pause;
+addEventListener('pagehide', () => {
+  if (session.token)
+    navigator.sendBeacon(
+      '/api/queue/leave',
+      new Blob([JSON.stringify({ token: session.token })], { type: 'application/json' }),
+    );
+});
+async function pollCount() {
+  if (
+    !['title', 'won', 'lost', 'continue'].includes(model.phase) ||
+    session.result?.status === 'waiting'
+  )
+    return;
+  try {
+    const r = await fetch('/api/queue/status');
+    if (r.ok) updateCount(await r.json());
+  } catch {
+    /* Retain last confirmed count. */
+  }
+}
+function resultScreen() {
+  sessionEnded = true;
+  const won = model.phase === 'won',
+    copy = won
+      ? S.winCopy[model.lives - 1]
+      : [S.lossKicker, `${model.burned} / 12 · ${model.score} · ${S.loss}`];
+  showDialog(
+    won ? S.win : S.loss,
+    `${copy[0]}\n${copy[1]}\n${Math.round(model.time)} s · ${model.score}`,
+    won ? S.runBack : S.continue,
+    won
+      ? enterRun
+      : () => {
+          model.continueRun();
+          hideDialog();
+          sessionEnded = false;
+          setScreen();
+        },
+    S.leave,
+    leave,
+  );
+  if (won && model.continues === 0) {
+    const badge = document.createElement('span');
+    badge.className = 'one-credit';
+    badge.textContent = S.hud.oneCredit;
+    $('dialog-body').append(badge);
+  }
+}
+function frame(now) {
+  const elapsed = Math.min(0.25, (now - lastTime) / 1000);
+  lastTime = now;
+  pollGamepad(now);
+  audio.tick();
+  session.check();
+  if (resumeAt !== null) {
+    const beat = audio.beatAt(now);
+    $('dialog-body').textContent =
+      resumeAt - beat > 3 ? S.hud.count : String(Math.max(1, Math.ceil(resumeAt - beat)));
+    if (beat >= resumeAt) {
+      model.phase = resumePhase;
+      if (resumePhase === 'continue') sessionEnded = false;
+      resumeAt = null;
+      hideDialog();
+      lastTime = now;
+      accumulator = 0;
+      tickStamp = now;
+      setScreen();
+    }
+  }
+  releaseIfIdle();
+  if (!['title', 'paused', 'won', 'lost'].includes(model.phase)) {
+    accumulator += elapsed;
+    while (accumulator + 1e-9 >= STEP) {
+      tickStamp = now - (accumulator - STEP) * 1000;
+      const x =
+        (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) -
+        (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
+      const z =
+        (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) -
+        (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
+      const beat = audio.running ? Math.max(model.beat, audio.beatAt(tickStamp)) : undefined;
+      model.inputDevice = activeDevice;
+      model.timingWindowExtra = audio.fallback ? 0.025 : 0;
+      model.tick(STEP, {
+        x: x || touchMove.x || pad.x || 0,
+        z: z || touchMove.z || pad.z || 0,
+        edges: edges.splice(0),
+        beat,
+      });
+      accumulator -= STEP;
+      for (const e of model.drainEvents()) {
+        world.event(e, model);
+        audio.event(e);
+      }
+    }
+  } else accumulator = 0;
+  world.draw(model, elapsed);
+  document.documentElement.style.setProperty('--beat', model.beatPulse);
+  $('super-touch').hidden = model.riot < 100;
+  if (now - lastAria >= 500) {
+    const value = `${S.brand}. ${model.burned}/12. ${model.lives} ${S.lives}. ${Math.round(model.player.pipeline)} ${S.percent} ${S.hud.pipeline}. ${count.activeCount}/${count.capacity} ${S.hud.playing}.`;
+    if ($('live-status').textContent !== value) $('live-status').textContent = value;
+    lastAria = now;
+  }
+  if (now - lastPoll > 10000) {
+    pollCount();
+    lastPoll = now;
+  }
+  if (['won', 'continue'].includes(model.phase) && !sessionEnded) resultScreen();
+  if (model.phase === 'continue' && !$('dialog').hidden)
+    $('dialog-primary').textContent =
+      `${S.continuePrompt} ${Math.max(0, Math.ceil((model.continueEnd - model.beat) / 4) - 1)}…`;
+  if (model.phase === 'lost' && lastPhase === 'continue')
+    showDialog(
+      S.loss,
+      `${model.burned} / 12 · ${model.score}`,
+      S.runBack,
+      enterRun,
+      S.leave,
+      leave,
+    );
+  if (model.phase !== lastPhase) {
+    lastPhase = model.phase;
+    $('touch-controls').hidden =
+      !touch() || !['playing', 'countin', 'vs', 'transform'].includes(model.phase);
+  }
   requestAnimationFrame(frame);
 }
+// Read-only review surface: never expose session tokens or mutation hooks.
+window.frattyDebug = () => ({
+  phase: model.phase,
+  time: model.time,
+  beat: model.beat,
+  burned: model.burned,
+  lives: model.lives,
+  score: model.score,
+  look: model.look,
+  pipeline: model.player.pipeline,
+  player: { ...model.player },
+  queue: session.result
+    ? { status: session.result.status, position: session.result.position }
+    : null,
+  count,
+  arena: model.arena?.id,
+  enemies: model.enemies.map((e) => ({ kind: e.kind, state: e.state, x: e.x, z: e.z })),
+  stats: world.stats(),
+  audio: {
+    available: audio.available,
+    fallback: audio.fallback ?? false,
+    state: audio.ctx?.state,
+    beat: audio.beatAt(),
+    scheduled: audio.scheduled.slice(-5),
+  },
+  inputDevice: activeDevice,
+});
+pollCount();
+setScreen();
 requestAnimationFrame(frame);
-// A read-only diagnostic snapshot for browser verification; it cannot alter the run or admission.
-Object.defineProperty(window,'frattyDebug',{value:()=>({phase:model.phase,score:model.score,lives:model.lives,burned:model.burned,pressure:model.player.pipeline,level:model.player.level,ammo:model.ammo,player:{...model.player},targetId:model.targetId,portrait:model.portrait,queue:session?{status:session.status,activeCount:session.activeCount,position:session.position}:null,render:world?.stats?.()})});

@@ -1,235 +1,154 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import vm from 'node:vm';
-import { GameModel, DISTRICTS } from '../src/model.js';
-
-// Execute the actual client controller and game simulation. Only browser I/O is
-// replaced, so delayed responses exercise the real event handlers and promises.
-const clientSource = (await readFile(new URL('../src/main.js', import.meta.url), 'utf8'))
-  .replace(/^import[^\n]*\n/gm, '');
-const flush = () => new Promise(resolve => setImmediate(resolve));
-
-function admission(token = 'a'.repeat(64), overrides = {}) {
+import { IDLE_MS, Session } from '../src/session.js';
+import { gamepadState, radial } from '../src/controls.js';
+import { calibrate, GameAudio } from '../src/audio.js';
+const admission = {
+  token: 'a'.repeat(64),
+  status: 'active',
+  activeCount: 1,
+  capacity: 20,
+  leaseSeconds: 75,
+  heartbeatSeconds: 15,
+  sessionSecondsRemaining: 1200,
+};
+function setup(options = {}) {
+  let now = 0;
+  const scheduled = [],
+    calls = [];
+  let expired = 0,
+    admitted = 0,
+    warnings = 0;
+  const session = new Session({
+    request: (action, data) =>
+      new Promise((resolve, reject) => calls.push({ action, data, resolve, reject })),
+    now: () => now,
+    timer: (fn, ms) => {
+      scheduled.push({ fn, ms });
+      return scheduled.length;
+    },
+    clear: () => {},
+    onExpired: () => expired++,
+    onAdmitted: () => admitted++,
+    onWarning: () => warnings++,
+    ...options,
+  });
   return {
-    token, status: 'active', position: 0, activeCount: 20, capacity: 20,
-    leaseSeconds: 75, heartbeatSeconds: 15, ...overrides,
+    session,
+    calls,
+    scheduled,
+    advance: (ms) => (now += ms),
+    stats: () => ({ expired, admitted, warnings }),
   };
 }
-
-function browser() {
-  let now = 0, nextTimer = 0;
-  const timers = new Map(), frames = [], elements = new Map(), requests = [];
-  const windowListeners = new Map(), documentListeners = new Map();
-  const saved = new Map();
-  const document = { hidden: false, activeElement: null, body: { dataset: {} } };
-  const listen = (listeners, type, handler) => {
-    if (!listeners.has(type)) listeners.set(type, []);
-    listeners.get(type).push(handler);
-  };
-  const dispatch = (listeners, type, details = {}) => {
-    const event = { preventDefault() {}, ...details };
-    for (const handler of listeners.get(type) ?? []) handler(event);
-  };
-  function element(id) {
-    if (elements.has(id)) return elements.get(id);
-    const listeners = new Map();
-    const attributes = new Map();
-    const classes = new Set();
-    const node = {
-      id, hidden: ['dialog', 'transformation', 'fatal', 'hud', 'pause-btn', 'touch-controls'].includes(id),
-      disabled: false, textContent: '', innerHTML: '', style: {}, dataset: id === 'app' ? { screen: 'title' } : {},
-      classList: { add: name => classes.add(name), remove: name => classes.delete(name) },
-      addEventListener: (type, handler) => listen(listeners, type, handler),
-      setAttribute: (name, value) => attributes.set(name, value),
-      getAttribute: name => attributes.get(name),
-      setPointerCapture() {},
-      focus() { document.activeElement = node; },
-      querySelectorAll() { return ['dialog-primary', 'dialog-secondary'].map(element).filter(button => !button.hidden && !button.disabled); },
-      emit(type, details = {}) { dispatch(listeners, type, { currentTarget: node, ...details }); },
-    };
-    elements.set(id, node);
-    return node;
+test('cancelled join releases late admission', async () => {
+  const p = setup();
+  const join = p.session.join();
+  await p.session.leave();
+  p.calls[0].resolve(admission);
+  await new Promise((r) => setImmediate(r));
+  assert.equal(p.calls[1].action, 'leave');
+  p.calls[1].resolve({});
+  await join;
+  assert.equal(p.stats().admitted, 0);
+});
+test('heartbeat retries2/4/8s without pausing;410 and actual expiration pause', async () => {
+  const p = setup();
+  p.session.accept(admission, 0);
+  for (const delay of [2000, 4000, 8000]) {
+    const heartbeat = p.session.heartbeat();
+    p.calls.at(-1).reject(new Error('network'));
+    await heartbeat;
+    assert.equal(p.scheduled.at(-1).ms, delay);
+    assert.equal(p.stats().expired, 0);
   }
-  document.getElementById = element;
-  document.addEventListener = (type, handler) => listen(documentListeners, type, handler);
-  class WorldRenderer {
-    resize() {} render() {} burst() {} stats() { return {}; }
-  }
-  class GameAudio {
-    start() {} effect() {} tick() {} toggle() { return false; }
-  }
-  const window = {};
-  const context = vm.createContext({
-    GameModel, DISTRICTS, WorldRenderer, GameAudio, document, window,
-    performance: { now: () => now },
-    localStorage: { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) },
-    innerWidth: 1280, innerHeight: 800, matchMedia: () => ({ matches: false }),
-    navigator: { maxTouchPoints: 0, sendBeacon: () => true },
-    AbortSignal: { timeout: () => ({}) }, Blob, console,
-    addEventListener: (type, handler) => listen(windowListeners, type, handler),
-    setTimeout(handler, delay) { const id = ++nextTimer; timers.set(id, { handler, due: now + delay }); return id; },
-    clearTimeout: id => timers.delete(id),
-    requestAnimationFrame: handler => { frames.push(handler); },
-    fetch(path, options) {
-      return new Promise((resolve, reject) => {
-        const item = {
-          action: path.split('/').at(-1), body: JSON.parse(options.body), settled: false,
-          reply(value, status = 200) {
-            assert.equal(item.settled, false, 'A test response must only complete once');
-            item.settled = true;
-            resolve({ ok: status >= 200 && status < 300, status, json: async () => value });
-          },
-          fail(error) { item.settled = true; reject(error); },
-        };
-        requests.push(item);
-      });
+  const heartbeat = p.session.heartbeat();
+  p.calls.at(-1).reject(Object.assign(new Error(), { status: 410 }));
+  await heartbeat;
+  assert.equal(p.stats().expired, 1);
+});
+test('lease uses request start, warns once at60 seconds', () => {
+  const p = setup();
+  p.advance(6000);
+  p.session.accept({ ...admission, sessionSecondsRemaining: 59 }, 0);
+  assert.equal(p.session.leaseUntil, 75000);
+  assert.equal(p.stats().warnings, 1);
+  p.session.accept({ ...admission, sessionSecondsRemaining: 50 }, 0);
+  assert.equal(p.stats().warnings, 1);
+  p.advance(69000);
+  p.session.check();
+  assert.equal(p.stats().expired, 1);
+  p.session.check();
+  assert.equal(p.stats().expired, 1);
+  assert.equal(p.session.expired, true);
+});
+test('hidden-tab heartbeats release an idle seat instead of renewing it', async () => {
+  let released = 0;
+  const p = setup({
+    releaseIfIdle: () => {
+      if (!p.session.idle()) return false;
+      released++;
+      p.session.leave();
+      return true;
     },
   });
-  vm.runInContext(clientSource, context, { filename: 'src/main.js' });
-  return {
-    element, requests,
-    snapshot: () => window.frattyDebug(),
-    pending(action) {
-      const item = requests.find(request => request.action === action && !request.settled);
-      assert.ok(item, `Expected a pending ${action} request`);
-      return item;
-    },
-    async reply(action, result, status = 200) { this.pending(action).reply(result, status); await flush(); },
-    async click(id) {
-      const node = element(id);
-      assert.equal(node.hidden, false, `${id} must be visible`);
-      assert.equal(node.disabled, false, `${id} must be enabled`);
-      dispatch(windowListeners, 'pointerdown');
-      node.emit('click');
-      await flush();
-    },
-    async visibility(hidden) { document.hidden = hidden; dispatch(documentListeners, 'visibilitychange'); await flush(); },
-    async key(code, down = true) { dispatch(windowListeners, down ? 'keydown' : 'keyup', { code, repeat: false }); await flush(); },
-    async advance(milliseconds) {
-      now += milliseconds;
-      for (const [id, timer] of [...timers]) {
-        if (timer.due <= now && timers.has(id)) { timers.delete(id); timer.handler(); }
-      }
-      // One rendered frame also tests the controller's admission/expiry guard.
-      for (const handler of frames.splice(0)) handler(now);
-      await flush();
-    },
-  };
-}
-
-async function start(page, result = admission()) {
-  await page.click('start-btn');
-  await page.reply('join', result);
-}
-
-test('cancelled join releases its late admission and stays on the title screen', async () => {
-  const page = browser();
-  await page.click('start-btn');
-  const delayed = page.pending('join');
-  await page.click('dialog-secondary');
-  assert.equal(page.element('app').dataset.screen, 'title');
-  delayed.reply(admission());
-  await flush();
-  assert.equal(page.pending('leave').body.token, admission().token);
-  await page.reply('leave', { status: 'left' });
-  assert.equal(page.snapshot().phase, 'title');
-  assert.equal(page.snapshot().queue, null);
-  assert.equal(page.element('dialog').hidden, true);
-  // A cancelled operation must not leave the request lock stuck.
-  await page.click('start-btn');
-  assert.ok(page.pending('join'));
+  p.session.accept(admission, 0);
+  p.advance(IDLE_MS);
+  const renewal = p.session.heartbeat();
+  assert.equal(p.calls.at(-1).action, 'heartbeat');
+  p.calls.at(-1).resolve(admission);
+  await renewal;
+  p.advance(1);
+  await p.session.heartbeat();
+  assert.equal(released, 1);
+  assert.equal(p.calls.at(-1).action, 'leave');
+  assert.equal(p.calls.filter((call) => call.action === 'heartbeat').length, 1);
+});
+test('gamepad maps all requested buttons and radial dead zone', () => {
+  const buttons = Array.from({ length: 16 }, () => ({ pressed: false }));
+  buttons[0].pressed = true;
+  buttons[7].pressed = true;
+  buttons[5].pressed = true;
+  buttons[3].pressed = true;
+  buttons[9].pressed = true;
+  const state = gamepadState({ axes: [0.1, 0.1], buttons });
+  assert.deepEqual(state, {
+    x: 0,
+    z: 0,
+    ollie: true,
+    throw: true,
+    push: true,
+    super: true,
+    pause: true,
+  });
+  assert.deepEqual(radial(0.1, 0.02, 0.12), { x: 0, z: 0 });
+  assert.ok(radial(0.8, 0.8).x < 1);
+});
+test('8-tap calibration measures180ms with jitter and rejects scattered taps', () => {
+  const valid = calibrate([0.16, 0.18, 0.2, 0.17, 0.19, 0.18, 0.175, 0.185]);
+  assert.equal(valid.accepted, true);
+  assert.ok(Math.abs(valid.offset - 0.18) < 0.01);
+  assert.equal(calibrate([-0.2, 0.3, -0.3, 0.2, -0.1, 0.1, -0.4, 0.4]).accepted, false);
 });
 
-test('admission received while hidden enters only after a visible heartbeat confirms it', async () => {
-  const page = browser();
-  await page.click('start-btn');
-  await page.visibility(true);
-  await page.reply('join', admission());
-  assert.equal(page.snapshot().phase, 'title');
-  await page.visibility(false);
-  assert.equal(page.snapshot().phase, 'title', 'Visibility alone cannot grant play');
-  await page.reply('heartbeat', admission());
-  assert.equal(page.snapshot().phase, 'playing');
-  assert.equal(page.element('app').dataset.screen, 'game');
-  assert.equal(page.element('dialog').hidden, true);
-});
-
-test('a delayed leave response cannot reset a subsequent admitted run', async () => {
-  const page = browser();
-  await start(page);
-  await page.click('pause-btn');
-  await page.click('dialog-secondary');
-  const oldLeave = page.pending('leave');
-  assert.equal(page.snapshot().phase, 'title', 'Leaving resets the screen before the network responds');
-  await start(page, admission('b'.repeat(64)));
-  oldLeave.reply({ status: 'left' });
-  await flush();
-  assert.equal(page.snapshot().phase, 'playing');
-  assert.equal(page.snapshot().queue.status, 'active');
-  assert.equal(page.element('app').dataset.screen, 'game');
-});
-
-test('visible waiting clients keep their place beyond the active-player idle timeout', async () => {
-  const page = browser();
-  const waiting = admission('c'.repeat(64), { status: 'waiting', position: 3, leaseSeconds: 90 });
-  await start(page, waiting);
-  for (let elapsed = 0; elapsed < 135_000; elapsed += 15_000) {
-    await page.advance(15_000);
-    assert.equal(page.pending('heartbeat').body.token, waiting.token);
-    await page.reply('heartbeat', waiting);
-  }
-  assert.equal(page.requests.some(request => request.action === 'leave'), false);
-  assert.equal(page.snapshot().queue.status, 'waiting');
-  assert.equal(page.snapshot().queue.position, 3);
-  assert.equal(page.element('dialog-title').textContent, 'HOLD YOUR SPOT.');
-});
-
-test('slow admission responses do not extend the lease past the server deadline', async () => {
-  const page = browser();
-  await page.click('start-btn');
-  await page.advance(6_000);
-  await page.reply('join', admission());
-  assert.equal(page.snapshot().phase, 'playing');
-  await page.advance(68_000);
-  // The heartbeat remains unanswered, simulating a disconnected client. At 74s
-  // the original 75s lease's conservative 73s deadline has already elapsed.
-  assert.equal(page.snapshot().phase, 'paused');
-  assert.equal(page.element('dialog-title').textContent, 'BACK TO THE LINE.');
-});
-
-test('a paused transformation resumes its remaining animation before spending one life', async (t) => {
-  // Deterministic rush swag spawns in the upper skating lane. The model captures
-  // this random source at creation; subsequent play uses normal client input.
-  const random = t.mock.method(Math, 'random', () => .01);
-  const page = browser();
-  random.mock.restore();
-  await start(page);
-  await page.key('KeyW');
-  // Skating into actual rush swag triggers the first makeover.
-  // Keeping a movement key held also exercises active-input idle renewal.
-  for (let elapsed = 0; elapsed < 180_000 && page.snapshot().phase === 'playing'; elapsed += 50) {
-    await page.advance(50);
-    const heartbeat = page.requests.find(request => request.action === 'heartbeat' && !request.settled);
-    if (heartbeat) { heartbeat.reply(admission()); await flush(); }
-  }
-  assert.equal(page.snapshot().phase, 'transform');
-  assert.equal(page.snapshot().lives, 3);
-  await page.advance(500);
-  await page.click('pause-btn');
-  assert.equal(page.snapshot().phase, 'paused');
-  assert.equal(page.element('transformation').hidden, true);
-  await page.advance(5_000);
-  assert.equal(page.snapshot().lives, 3, 'A paused animation must not spend a life');
-  const pausedHeartbeat = page.requests.find(request => request.action === 'heartbeat' && !request.settled);
-  if (pausedHeartbeat) { pausedHeartbeat.reply(admission()); await flush(); }
-  await page.click('dialog-primary');
-  await page.reply('heartbeat', admission());
-  assert.equal(page.snapshot().phase, 'transform');
-  assert.equal(page.element('transformation').hidden, false);
-  for (let elapsed = 0; elapsed < 3_000 && page.snapshot().phase === 'transform'; elapsed += 50) await page.advance(50);
-  assert.equal(page.snapshot().phase, 'playing');
-  assert.equal(page.snapshot().lives, 2);
-  assert.equal(page.snapshot().level, 1);
-  assert.equal(page.element('transformation').hidden, true);
+test('resume cancels old audio voices and requeues all in-flight smashes on their original beats', async () => {
+  let stops = 0;
+  const audio = Object.create(GameAudio.prototype);
+  Object.assign(audio, {
+    unlock: async () => {},
+    ctx: { currentTime: 20 },
+    available: false,
+    voices: [{ source: { stop: () => stops++ } }],
+    pending: [{ type: 'stale', beat: 1 }],
+  });
+  assert.equal(
+    await audio.resume(40, [{ landBeat: 42 }, { landBeat: 43 }, { landBeat: 44, dead: true }]),
+    36,
+  );
+  assert.equal(stops, 1);
+  assert.deepEqual(audio.pending, [
+    { type: 'smash', beat: 42 },
+    { type: 'smash', beat: 43 },
+  ]);
+  assert.equal(audio.running, true);
 });

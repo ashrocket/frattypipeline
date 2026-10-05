@@ -4,6 +4,7 @@ import test from 'node:test';
 import { AdmissionQueue, memoryStore, QUEUE_CONFIG } from '../server/queue.mjs';
 import { handleQueueRequest } from '../server/http.mjs';
 import { createQueueServer } from '../server/dev.mjs';
+import { IDLE_MS } from '../src/session.js';
 
 function room(options = {}) {
   let timestamp = 1_000_000;
@@ -63,8 +64,13 @@ test('mixed concurrent leaves, joins, and heartbeats cannot overbook or skip wai
   assert.equal((await queue.perform('heartbeat', { token: players[30].token })).position, 1);
 });
 
+test('an active lease survives the client idle grace while a phone cannot heartbeat', () => {
+  // The last heartbeat may land a full interval before the tab is hidden.
+  assert.ok(QUEUE_CONFIG.activeLeaseSeconds * 1000 >= IDLE_MS + QUEUE_CONFIG.heartbeatSeconds * 1000);
+});
+
 test('stale active leases expire and live waiters are promoted at the lease boundary', async () => {
-  const { queue, advance } = room({ config: { capacity: 1 } });
+  const { queue, advance } = room({ config: { capacity: 1, activeLeaseSeconds: 75 } });
   const active = await queue.perform('join');
   const waiting = await queue.perform('join');
   advance(75_000);
@@ -141,7 +147,7 @@ test('waiting capacity is bounded and an expired client can safely rejoin', asyn
   const active = await queue.perform('join');
   await queue.perform('join');
   await assert.rejects(queue.perform('join'), { status: 429, code: 'QUEUE_FULL' });
-  advance(100_000);
+  advance(QUEUE_CONFIG.activeLeaseSeconds * 1000 + 10_000);
   const rejoined = await queue.perform('join', { token: active.token });
   assert.equal(rejoined.status, 'active');
   assert.notEqual(rejoined.token, active.token);
@@ -189,6 +195,9 @@ test('real local HTTP server enforces capacity and releases a seat through the A
   const active = players.filter(player => player.status === 'active');
   const waiting = players.filter(player => player.status === 'waiting').sort((a, b) => a.position - b.position);
   assert.equal(active.length, 20);
+  const status = await fetch(`${origin}/api/queue/status`);
+  assert.equal(status.headers.get('cache-control'), 'max-age=5');
+  assert.deepEqual(await status.json(), { activeCount: 20, waitingCount: 4, capacity: 20 });
   assert.deepEqual(waiting.map(player => player.position), [1, 2, 3, 4]);
   await call('leave', { token: active[0].token });
   assert.equal((await call('heartbeat', { token: waiting[0].token })).status, 'active');

@@ -2,7 +2,9 @@
 export const QUEUE_CONFIG = Object.freeze({
   capacity: 20,
   heartbeatSeconds: 15,
-  activeLeaseSeconds: 75,
+  // Outlasts the client's two-minute idle grace (src/session.js IDLE_MS) plus one
+  // heartbeat, because a backgrounded or locked phone cannot heartbeat at all.
+  activeLeaseSeconds: 150,
   waitingLeaseSeconds: 90,
   maxSessionSeconds: 20 * 60,
   maxWaiting: 500,
@@ -20,28 +22,43 @@ export class QueueError extends Error {
 }
 
 function newToken() {
-  return Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('');
 }
 
 export function memoryStore(initial) {
   let state = initial === undefined ? undefined : structuredClone(initial);
   return {
-    async load() { return state === undefined ? undefined : structuredClone(state); },
-    async save(next) { state = structuredClone(next); },
+    async load() {
+      return state === undefined ? undefined : structuredClone(state);
+    },
+    async save(next) {
+      state = structuredClone(next);
+    },
   };
 }
 
 function validateState(state, config) {
-  if (!state || state.version !== 1 || !Array.isArray(state.players) || state.players.length > config.capacity + config.maxWaiting) {
+  if (
+    !state ||
+    state.version !== 1 ||
+    !Array.isArray(state.players) ||
+    state.players.length > config.capacity + config.maxWaiting
+  ) {
     throw new Error('Invalid saved queue state');
   }
   const seen = new Set();
   let active = 0;
   for (const player of state.players) {
-    if (!TOKEN_PATTERN.test(player.token) || seen.has(player.token)
-      || !['active', 'waiting'].includes(player.status)
-      || !Number.isFinite(player.expiresAt) || !Number.isFinite(player.joinedAt)
-      || (player.status === 'active' && !Number.isFinite(player.startedAt))) {
+    if (
+      !TOKEN_PATTERN.test(player.token) ||
+      seen.has(player.token) ||
+      !['active', 'waiting'].includes(player.status) ||
+      !Number.isFinite(player.expiresAt) ||
+      !Number.isFinite(player.joinedAt) ||
+      (player.status === 'active' && !Number.isFinite(player.startedAt))
+    ) {
       throw new Error('Invalid saved queue player');
     }
     seen.add(player.token);
@@ -56,13 +73,41 @@ function validateState(state, config) {
  * Production must route every caller to ONE named Durable Object instance.
  */
 export class AdmissionQueue {
-  constructor({ store = memoryStore(), now = Date.now, tokenFactory = newToken, config = {} } = {}) {
+  constructor({
+    store = memoryStore(),
+    now = Date.now,
+    tokenFactory = newToken,
+    config = {},
+  } = {}) {
     this.config = { ...QUEUE_CONFIG, ...config };
     this.store = store;
     this.now = now;
     this.tokenFactory = tokenFactory;
     this.state = undefined;
     this.tail = Promise.resolve();
+  }
+
+  status() {
+    // Serialized read, no token creation, renewals, promotion, or storage writes.
+    const operation = this.tail.then(async () => {
+      if (!this.state) {
+        this.state = (await this.store.load()) ?? { version: 1, players: [] };
+        validateState(this.state, this.config);
+      }
+      const now = this.now();
+      const players = this.state.players.filter(
+        (p) =>
+          p.expiresAt > now &&
+          (p.status !== 'active' || p.startedAt + this.config.maxSessionSeconds * 1000 > now),
+      );
+      return {
+        activeCount: players.filter((p) => p.status === 'active').length,
+        waitingCount: players.filter((p) => p.status === 'waiting').length,
+        capacity: this.config.capacity,
+      };
+    });
+    this.tail = operation.catch(() => {});
+    return operation;
   }
 
   perform(action, input = {}) {
@@ -79,8 +124,10 @@ export class AdmissionQueue {
       throw new QueueError(400, 'INVALID_REQUEST', 'Send a JSON object.');
     }
     const token = input.token;
-    if ((token !== undefined && (typeof token !== 'string' || !TOKEN_PATTERN.test(token)))
-      || (['heartbeat', 'leave'].includes(action) && typeof token !== 'string')) {
+    if (
+      (token !== undefined && (typeof token !== 'string' || !TOKEN_PATTERN.test(token))) ||
+      (['heartbeat', 'leave'].includes(action) && typeof token !== 'string')
+    ) {
       throw new QueueError(400, 'INVALID_TOKEN', 'A valid admission token is required.');
     }
 
@@ -92,30 +139,53 @@ export class AdmissionQueue {
       }
       const next = structuredClone(this.state);
       const now = this.now();
-      next.players = next.players.filter(player => player.expiresAt > now
-        && (player.status !== 'active' || player.startedAt + this.config.maxSessionSeconds * 1000 > now));
+      next.players = next.players.filter(
+        (player) =>
+          player.expiresAt > now &&
+          (player.status !== 'active' ||
+            player.startedAt + this.config.maxSessionSeconds * 1000 > now),
+      );
       this.promote(next, now);
 
-      let player = next.players.find(candidate => candidate.token === token);
+      let player = next.players.find((candidate) => candidate.token === token);
       let problem;
       if (action === 'join') {
         if (!player) {
-          if (next.players.filter(candidate => candidate.status === 'waiting').length >= this.config.maxWaiting) {
-            problem = new QueueError(429, 'QUEUE_FULL', 'The waiting room is full. Please try again shortly.');
+          if (
+            next.players.filter((candidate) => candidate.status === 'waiting').length >=
+            this.config.maxWaiting
+          ) {
+            problem = new QueueError(
+              429,
+              'QUEUE_FULL',
+              'The waiting room is full. Please try again shortly.',
+            );
           } else {
             let freshToken;
-            do { freshToken = this.tokenFactory(); } while (next.players.some(candidate => candidate.token === freshToken));
-            player = { token: freshToken, status: 'waiting', joinedAt: now, expiresAt: now + this.config.waitingLeaseSeconds * 1000 };
+            do {
+              freshToken = this.tokenFactory();
+            } while (next.players.some((candidate) => candidate.token === freshToken));
+            player = {
+              token: freshToken,
+              status: 'waiting',
+              joinedAt: now,
+              expiresAt: now + this.config.waitingLeaseSeconds * 1000,
+            };
             next.players.push(player);
             this.promote(next, now);
           }
         }
         if (player) this.renew(player, now);
       } else if (action === 'heartbeat') {
-        if (!player) problem = new QueueError(410, 'SESSION_EXPIRED', 'Your spot expired. Rejoin the waiting room.');
+        if (!player)
+          problem = new QueueError(
+            410,
+            'SESSION_EXPIRED',
+            'Your spot expired. Rejoin the waiting room.',
+          );
         else this.renew(player, now);
       } else if (action === 'leave') {
-        next.players = next.players.filter(candidate => candidate.token !== token);
+        next.players = next.players.filter((candidate) => candidate.token !== token);
         this.promote(next, now);
         player = undefined;
       }
@@ -123,22 +193,32 @@ export class AdmissionQueue {
       await this.store.save(next, this.nextExpiry(next));
       this.state = next;
       if (problem) throw problem;
-      const activeCount = next.players.filter(candidate => candidate.status === 'active').length;
-      if (action === 'sweep') return { activeCount, waitingCount: next.players.length - activeCount };
-      if (action === 'leave') return { status: 'left', activeCount, capacity: this.config.capacity };
+      const activeCount = next.players.filter((candidate) => candidate.status === 'active').length;
+      if (action === 'sweep')
+        return { activeCount, waitingCount: next.players.length - activeCount };
+      if (action === 'leave')
+        return { status: 'left', activeCount, capacity: this.config.capacity };
       return {
         token: player.token,
         status: player.status,
-        position: player.status === 'active' ? 0 : next.players.filter(candidate => candidate.status === 'waiting').indexOf(player) + 1,
+        position:
+          player.status === 'active'
+            ? 0
+            : next.players.filter((candidate) => candidate.status === 'waiting').indexOf(player) +
+              1,
         activeCount,
         capacity: this.config.capacity,
         leaseSeconds: Math.max(0, Math.ceil((player.expiresAt - now) / 1000)),
         heartbeatSeconds: this.config.heartbeatSeconds,
         expiresAt: player.expiresAt,
         serverTime: now,
-        sessionSecondsRemaining: player.status === 'active'
-          ? Math.max(0, Math.ceil((player.startedAt + this.config.maxSessionSeconds * 1000 - now) / 1000))
-          : null,
+        sessionSecondsRemaining:
+          player.status === 'active'
+            ? Math.max(
+                0,
+                Math.ceil((player.startedAt + this.config.maxSessionSeconds * 1000 - now) / 1000),
+              )
+            : null,
       };
     } catch (error) {
       // Storage errors can have ambiguous commit outcomes. Reload, never assume.
@@ -148,13 +228,18 @@ export class AdmissionQueue {
   }
 
   renew(player, now) {
-    player.expiresAt = player.status === 'active'
-      ? Math.min(now + this.config.activeLeaseSeconds * 1000, player.startedAt + this.config.maxSessionSeconds * 1000)
-      : now + this.config.waitingLeaseSeconds * 1000;
+    player.expiresAt =
+      player.status === 'active'
+        ? Math.min(
+            now + this.config.activeLeaseSeconds * 1000,
+            player.startedAt + this.config.maxSessionSeconds * 1000,
+          )
+        : now + this.config.waitingLeaseSeconds * 1000;
   }
 
   promote(state, now) {
-    let vacancies = this.config.capacity - state.players.filter(player => player.status === 'active').length;
+    let vacancies =
+      this.config.capacity - state.players.filter((player) => player.status === 'active').length;
     for (const player of state.players) {
       if (vacancies <= 0) break;
       if (player.status !== 'waiting') continue;
@@ -166,6 +251,8 @@ export class AdmissionQueue {
   }
 
   nextExpiry(state) {
-    return state.players.length ? Math.min(...state.players.map(player => player.expiresAt)) : null;
+    return state.players.length
+      ? Math.min(...state.players.map((player) => player.expiresAt))
+      : null;
   }
 }

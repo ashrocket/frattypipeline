@@ -1,0 +1,2 @@
+c302d60 fire adapter: 100/100 hold-throw wins; mean 63.3 s.
+Fun-floor gate: FAIL (expected) — maximum allowed 5/100.

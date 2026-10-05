@@ -1,52 +1,93 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#171923" />
-  <meta name="description" content="A skateboard punk arcade rampage. Twelve frats. Three lives. One very bad influence. No accounts. Just play." />
-  <title>Greek Row — Burn the status quo.</title>
-  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-  <link rel="stylesheet" href="/styles.css" />
-</head>
-<body>
-  <div id="app" data-screen="title">
-    <header class="topbar">
-      <a class="brand" href="/" aria-label="Greek Row home"><span class="brand-symbol">G<span>/</span>R</span><span>GREEK<br>ROW</span></a>
-      <div class="edition">GROUCHO BARKS PRESENTS <span>AN ARCADE ACT OF REBELLION</span></div>
-      <div class="top-actions"><span id="server-status" class="server-status"><i></i>20 PLAYER CLUB</span><button id="sound-btn" class="icon-button" aria-label="Enable or mute sound" aria-pressed="false">♫</button><button id="pause-btn" class="icon-button" aria-label="Pause game" hidden>Ⅱ</button></div>
-    </header>
-    <main id="stage" aria-label="Greek Row arcade game">
-      <div id="world" role="img" aria-label="Side-view neighborhood. Skate left and right, carve in and out of street depth, and throw at glowing lawns."></div>
-      <div class="vignette"></div>
-      <section id="title-screen" class="title-screen">
-        <div class="hero-copy">
-          <div class="eyebrow"><span class="tiny-star">✦</span> THREE LIVES. ZERO REGRETS.</div>
-          <h1>GREEK<br><span>ROW</span><b>↗</b></h1>
-          <p class="tagline">Burn the status quo.</p>
-          <p class="hero-description">Skate Greek Row. Torch every lawn. Dodge the makeover.<br>Get turned? Come back <em>even more punk.</em></p>
-          <div class="start-row"><button id="start-btn" class="primary">LET’S RIOT <span>↗</span></button><span class="no-signup">NO ACCOUNT.<br>ALL ATTITUDE.</span></div>
-          <div class="hero-controls"><span><kbd>WASD</kbd> MOVE</span><span><kbd>F</kbd> THROW</span><span><kbd>SPACE</kbd> OLLIE</span></div>
-          <button id="how-btn" class="text-button">FIRST TIME ON THE ROW? <span>HOW TO PLAY ↗</span></button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#0B0A0F" />
+    <meta
+      name="description"
+      content="PIPELINE. A punk skateboard arena fighter. Twelve fictional houses, three lives, your chosen look. Burn the status quo."
+    />
+    <title>PIPELINE — Burn the status quo.</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app" data-screen="title">
+      <header class="topbar">
+        <a class="brand" href="/" data-aria="home" aria-label="PIPELINE home"
+          >PIPE<span>LINE</span><b>↗</b></a
+        >
+        <span class="header-flavor" data-copy="eyebrow"></span>
+        <div class="top-actions">
+          <span id="server-status" role="status">0 / 20 PLAYING</span
+          ><button id="sound-btn" data-aria="sound" aria-label="PIPELINE sound">♫</button
+          ><button id="pause-btn" data-aria="pause" aria-label="Pause PIPELINE" hidden>Ⅱ</button>
         </div>
-        <div class="scene-sticker"><span>WELCOME TO</span><strong>GREEK ROW</strong><small>EST. BAD DECISIONS</small></div>
-        <div class="title-bottom"><span><b>12</b> FRAT HOUSES</span><span><b>03</b> PUNK LIVES</span><span><b>01</b> LOUD EXIT</span><span class="personal-best">PERSONAL BEST <strong id="title-best">000000</strong></span></div>
-      </section>
-      <section id="hud" class="hud" aria-label="Run status" hidden>
-        <div class="run-stats"><div class="score-block"><span>SCORE</span><strong id="score">000000</strong></div><div class="lives-block"><span>PUNK LIVES</span><strong id="lives" aria-label="3 lives">✦ ✦ ✦</strong></div><div class="combo-block"><span>STREAK</span><strong id="combo">×1</strong><div class="small-track"><i id="combo-fill"></i></div></div></div>
-        <div class="mission"><div><span id="district">01 / FRESHMAN ROW</span><strong><b id="burned">0</b> / 12 DOWN</strong></div><div id="house-progress" class="house-progress"></div></div>
-        <div class="pipeline-panel"><div><span id="identity">PUNK, UNFILTERED</span><strong id="pressure-number">0%</strong></div><div class="pressure-track"><i id="pressure-fill"></i></div><small>MAKEOVER <span>SWAG + PERFUME = PREPPY</span></small></div>
-        <div id="target-prompt" class="target-prompt"><span class="target-icon">◎</span><div><strong id="target-name">FIND THE NEXT LAWN</strong><span id="target-health">Follow the row. Hold F to throw.</span></div></div>
-        <div class="kit-panel"><div><span>MOLOTOVS</span><strong id="ammo">● ● ● ● ●</strong><small>AUTO REFILL</small></div><div><span>SKATEBOARD</span><strong id="dash-state">READY ↗</strong><small>SPACE: OLLIE · SHIFT: PUSH</small></div></div>
-      </section>
-      <div id="toast" class="toast" role="status" aria-live="polite"></div>
-      <div id="transformation" class="transformation" hidden><span>THE PIPELINE GOT ITS MAKEOVER.</span><strong>SORORITY MODE.</strong><p id="transform-copy">Wait for the comeback.</p></div>
-      <div id="touch-controls" class="touch-controls" hidden><div id="joystick" class="joystick" aria-label="Drag to move"><span>MOVE</span><i id="stick"></i></div><div class="touch-actions"><button id="dash-touch" aria-label="Push skateboard">PUSH ↗</button><button id="ollie-touch" aria-label="Ollie skateboard">OLLIE ↑</button><button id="fire-touch" aria-label="Hold to throw molotovs">THROW<br><b>✦</b></button></div></div>
-      <section id="dialog" class="dialog-backdrop" hidden aria-label="Game dialog"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><span id="dialog-kicker" class="eyebrow">GREEK ROW</span><h2 id="dialog-title">HOW TO RIOT.</h2><div id="dialog-body"></div><div class="dialog-actions"><button id="dialog-primary" class="primary">LET’S GO ↗</button><button id="dialog-secondary" class="secondary" hidden>BACK</button></div></div></section>
-      <div id="fatal" class="fatal" hidden><h2>THE STAGE COULDN’T LOAD.</h2><p id="fatal-message"></p><button onclick="location.reload()" class="primary">TRY AGAIN ↗</button></div>
-    </main>
-    <footer><div class="track"><span class="equalizer"><i></i><i></i><i></i><i></i></span><span id="track-label">DEMO INSTRUMENTAL · ON REPEAT</span></div><span id="footer-hint">← → ALONG THE ROW · ↑ ↓ IN & OUT OF DEPTH</span><span class="version">VOL. 03 <i>✦</i></span></footer>
-  </div>
-  <script type="module" src="/src/main.js"></script>
-</body>
+      </header>
+      <main id="stage" data-aria="game" aria-label="PIPELINE arcade game">
+        <div id="world"></div>
+        <section id="title-screen">
+          <div class="hero-copy">
+            <p class="eyebrow" data-copy="eyebrow"></p>
+            <h1>PIPE<span>LINE</span><b>↗</b></h1>
+            <p class="tagline" data-copy="tagline"></p>
+            <p class="description" data-copy="description"></p>
+            <button id="start-btn" class="primary" data-copy="start"></button>
+            <button id="how-btn" class="secondary" data-copy="how"></button>
+            <p class="keyboard-help" data-copy="controls"></p>
+          </div>
+          <section class="look-picker" data-aria="look" aria-label="PIPELINE starting look">
+            <p class="eyebrow" data-copy="look"></p>
+            <div id="look-options"></div>
+            <div id="hair-options" data-aria="hair" aria-label="Hair color"></div>
+            <p data-copy="lookHelp"></p>
+            <p class="look-meaning" data-copy="prettyMeaning"></p>
+          </section>
+          <div class="title-ticker" data-copy="titleTicker"></div>
+        </section>
+        <p id="live-status" class="sr-only" aria-live="polite"></p>
+        <div id="touch-controls" hidden>
+          <div
+            id="joystick"
+            role="button"
+            tabindex="0"
+            data-aria="move"
+            aria-label="Move; flick forward to push"
+          >
+            <span data-copy="move">MOVE</span><i id="stick"></i>
+          </div>
+          <button id="super-touch" data-copy="super" hidden>SUPER</button>
+          <button id="ollie-touch" data-copy="ollie" data-aria="ollie" aria-label="Ollie">
+            OLLIE ↑</button
+          ><button
+            id="fire-touch"
+            data-copy="throw"
+            data-aria="throw"
+            aria-label="Hold to charge; release to throw"
+          >
+            THROW ↗
+          </button>
+        </div>
+        <button id="mobile-pause" data-aria="pause" aria-label="Pause PIPELINE" hidden>Ⅱ</button>
+        <section id="dialog" hidden class="dialog-backdrop">
+          <div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+            <p id="dialog-kicker" class="eyebrow">PIPELINE</p>
+            <h2 id="dialog-title"></h2>
+            <div id="dialog-body"></div>
+            <div id="settings" hidden></div>
+            <div class="dialog-actions">
+              <button id="dialog-primary" class="primary"></button
+              ><button id="dialog-secondary" class="secondary"></button>
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer>
+        <span class="equalizer">▂ ▅ ▃ ▆</span><span id="track-label"></span
+        ><span data-copy="titleTicker"></span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

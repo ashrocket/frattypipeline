@@ -1,0 +1,61 @@
+
+> fratty-pipeline@3.0.0 gauntlet
+> node scripts/gauntlet.mjs --holdout
+
+Checked Idle: 1000 runs, fairness/termination OK.
+Checked Spam-toss: 1000 runs, fairness/termination OK.
+Checked Spam-lob: 1000 runs, fairness/termination OK.
+Checked Spam-edge: 1000 runs, fairness/termination OK.
+Checked Spam-far: 1000 runs, fairness/termination OK.
+Checked Mash: 1000 runs, fairness/termination OK.
+Checked Throw+ollie: 1000 runs, fairness/termination OK.
+Checked Pacifist: 1000 runs, fairness/termination OK.
+Checked Suicide: 1000 runs, fairness/termination OK.
+Checked Novice: 1000 runs, fairness/termination OK.
+Checked Skilled: 1000 runs, fairness/termination OK.
+Seeds 1–200; 5 cosmetic looks.
+| Bot | Runs | Wins | Median s | Houses | Mean score | Hit runs | D3 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Idle | 1000 | 0.0% | 78.3 | 0.00 | 0 | 100.0% | 0.0% |
+| Spam-toss | 1000 | 0.0% | 82.2 | 0.00 | 0 | 100.0% | 0.0% |
+| Spam-lob | 1000 | 0.0% | 82.2 | 0.00 | 0 | 100.0% | 0.0% |
+| Spam-edge | 1000 | 0.0% | 82.2 | 0.00 | 0 | 100.0% | 0.0% |
+| Spam-far | 1000 | 0.0% | 125.3 | 0.00 | 1458 | 100.0% | 0.0% |
+| Mash | 1000 | 0.0% | 221.8 | 3.00 | 27637 | 100.0% | 0.0% |
+| Throw+ollie | 1000 | 0.0% | 124.0 | 1.08 | 1836 | 100.0% | 0.0% |
+| Pacifist | 1000 | 0.0% | 107.0 | 0.00 | 5348 | 100.0% | 0.0% |
+| Suicide | 1000 | 62.5% | 287.7 | 11.45 | 111971 | 100.0% | 97.0% |
+| Novice | 1000 | 32.0% | 320.3 | 11.14 | 145187 | 100.0% | 100.0% |
+| Skilled | 1000 | 99.5% | 249.8 | 11.99 | 331465 | 100.0% | 100.0% |
+Novice: dead air 17.0%; district lock medians 14.3/16.4/17.2 s; bosses 33.7/33.8/42.6 s.
+Skilled: dead air 19.9%; district lock medians 11.4/10.7/12.9 s; bosses 24.8/27.2/42.3 s.
+PASS
+Checked Idle: 1000 runs, fairness/termination OK.
+Checked Spam-toss: 1000 runs, fairness/termination OK.
+Checked Spam-lob: 1000 runs, fairness/termination OK.
+Checked Spam-edge: 1000 runs, fairness/termination OK.
+Checked Spam-far: 1000 runs, fairness/termination OK.
+Checked Mash: 1000 runs, fairness/termination OK.
+Checked Throw+ollie: 1000 runs, fairness/termination OK.
+Checked Pacifist: 1000 runs, fairness/termination OK.
+Checked Suicide: 1000 runs, fairness/termination OK.
+Checked Novice: 1000 runs, fairness/termination OK.
+Checked Skilled: 1000 runs, fairness/termination OK.
+Hold-out seeds 10001–10200; 5 cosmetic looks.
+| Bot | Runs | Wins | Median s | Houses | Mean score | Hit runs | D3 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Idle | 1000 | 0.0% | 78.3 | 0.00 | 0 | 100.0% | 0.0% |
+| Spam-toss | 1000 | 0.0% | 82.2 | 0.00 | 0 | 100.0% | 0.0% |
+| Spam-lob | 1000 | 0.0% | 82.2 | 0.00 | 0 | 100.0% | 0.0% |
+| Spam-edge | 1000 | 0.0% | 82.2 | 0.00 | 0 | 100.0% | 0.0% |
+| Spam-far | 1000 | 0.0% | 125.3 | 0.00 | 1466 | 100.0% | 0.0% |
+| Mash | 1000 | 0.0% | 225.7 | 3.00 | 28305 | 100.0% | 0.0% |
+| Throw+ollie | 1000 | 0.0% | 120.0 | 1.14 | 1834 | 100.0% | 0.0% |
+| Pacifist | 1000 | 0.0% | 107.0 | 0.00 | 5306 | 100.0% | 0.0% |
+| Suicide | 1000 | 60.0% | 289.9 | 11.38 | 113026 | 100.0% | 96.5% |
+| Novice | 1000 | 29.5% | 316.7 | 11.14 | 146031 | 100.0% | 100.0% |
+| Skilled | 1000 | 100.0% | 249.2 | 12.00 | 331044 | 100.0% | 100.0% |
+Novice: dead air 16.7%; district lock medians 14.3/16.8/17.1 s; bosses 33.6/33.7/43.3 s.
+Skilled: dead air 19.8%; district lock medians 11.4/10.8/13.2 s; bosses 24.8/27.6/41.9 s.
+PASS
+FULL GATE PASS: all thresholds, hold-out drift and cosmetic parity.
