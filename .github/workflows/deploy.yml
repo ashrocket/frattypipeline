@@ -1,4 +1,4 @@
-name: Deploy Greek Row
+name: Deploy PIPELINE
 
 on:
   workflow_dispatch:

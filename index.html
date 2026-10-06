@@ -3,26 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-    <meta name="theme-color" content="#0B0A0F" />
+    <meta name="theme-color" content="#4FC3FF" />
     <meta
       name="description"
-      content="PIPELINE. A punk skateboard arena fighter. Twelve fictional houses, three lives, your chosen look. Burn the status quo."
+      content="PIPELINE: a momentum skateboard arcade game on a fictional Greek Row. Keep rolling, sink flaming bottles into frat trash cans, and never let the Pipeline catch you."
     />
-    <title>PIPELINE — Burn the status quo.</title>
+    <title>PIPELINE</title>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
+  <body data-playing="false">
     <div id="app" data-screen="title">
       <header class="topbar">
-        <a class="brand" href="/" data-aria="home" aria-label="PIPELINE home"
-          >PIPE<span>LINE</span><b>↗</b></a
-        >
-        <span class="header-flavor" data-copy="eyebrow"></span>
+        <a class="brand" href="/" data-aria="home" aria-label="PIPELINE home">PIPELINE</a>
+        <span class="street">GREEK ROW</span>
         <div class="top-actions">
-          <span id="server-status" role="status">0 / 20 PLAYING</span
-          ><button id="sound-btn" data-aria="sound" aria-label="PIPELINE sound">♫</button
-          ><button id="pause-btn" data-aria="pause" aria-label="Pause PIPELINE" hidden>Ⅱ</button>
+          <span id="server-status" class="pill" role="status">0 / 20 PLAYING</span
+          ><button id="sound-btn" class="icon-btn" data-aria="sound" aria-label="PIPELINE sound" aria-pressed="false">♫</button
+          ><button id="pause-btn" class="icon-btn" data-aria="pause" aria-label="Pause PIPELINE" hidden>Ⅱ</button>
         </div>
       </header>
       <main id="stage" data-aria="game" aria-label="PIPELINE arcade game">
@@ -30,51 +28,67 @@
         <section id="title-screen">
           <div class="hero-copy">
             <p class="eyebrow" data-copy="eyebrow"></p>
-            <h1>PIPE<span>LINE</span><b>↗</b></h1>
+            <h1 class="logo" aria-label="PIPELINE"><span>PIPE</span><span>LINE</span></h1>
             <p class="tagline" data-copy="tagline"></p>
             <p class="description" data-copy="description"></p>
-            <button id="start-btn" class="primary" data-copy="start"></button>
-            <button id="how-btn" class="secondary" data-copy="how"></button>
-            <p class="keyboard-help" data-copy="controls"></p>
+            <div class="cta-row">
+              <button id="start-btn" class="primary" data-copy="start"></button>
+              <button id="how-btn" class="secondary" data-copy="how"></button>
+            </div>
+            <ul class="key-chips" aria-label="Keyboard controls">
+              <li><kbd>→</kbd> kick</li>
+              <li><kbd>←</kbd> slow down</li>
+              <li><kbd>↑↓</kbd> carve</li>
+              <li><kbd>T</kbd> hold to light, release to throw</li>
+              <li><kbd>Space</kbd> ollie · hold in the air: backflip</li>
+              <li><kbd>↑↓←→</kbd> in the air: flip tricks</li>
+              <li><kbd>Shift</kbd> power kick · grab</li>
+              <li><kbd>Q</kbd> item</li>
+              <li><kbd>Enter</kbd> skip</li>
+            </ul>
+            <p class="title-meta"><span id="title-count" class="pill">0 / 20 PLAYING</span><span id="title-best" class="best" hidden></span><span id="track-label"></span></p>
           </div>
           <section class="look-picker" data-aria="look" aria-label="PIPELINE starting look">
-            <p class="eyebrow" data-copy="look"></p>
-            <div id="look-options"></div>
-            <div id="hair-options" data-aria="hair" aria-label="Hair color"></div>
-            <p data-copy="lookHelp"></p>
+            <p class="picker-title" data-copy="look"></p>
+            <div id="look-options" class="look-options"></div>
+            <div class="swatch-row">
+              <span>Hair</span>
+              <div id="hair-options" data-aria="hair" aria-label="Hair color"></div>
+            </div>
+            <div class="swatch-row">
+              <span>Skin</span>
+              <div id="skin-options" data-aria="skin" aria-label="Skin tone"></div>
+            </div>
+            <p class="look-help" data-copy="lookHelp"></p>
             <p class="look-meaning" data-copy="prettyMeaning"></p>
+            <div class="run-setup">
+              <p class="picker-title small" data-copy="campus"></p>
+              <div id="campus-options" class="campus-options" data-aria="campus" aria-label="Campus"></div>
+              <p class="picker-title small" data-copy="route"></p>
+              <div id="route-options" class="route-options" data-aria="route" aria-label="Route"></div>
+              <label class="toggle"><input id="training-toggle" type="checkbox" checked /> <span data-copy="trainingToggle"></span></label>
+              <p id="campus-disclaimer" class="disclaimer"></p>
+            </div>
           </section>
-          <div class="title-ticker" data-copy="titleTicker"></div>
+          <div class="title-ticker"><span data-copy="titleTicker"></span><span data-copy="titleTicker" aria-hidden="true"></span></div>
         </section>
         <p id="live-status" class="sr-only" aria-live="polite"></p>
         <div id="touch-controls" hidden>
-          <div
-            id="joystick"
-            role="button"
-            tabindex="0"
-            data-aria="move"
-            aria-label="Move; flick forward to push"
-          >
-            <span data-copy="move">MOVE</span><i id="stick"></i>
+          <div id="joystick" role="button" tabindex="0" data-aria="move" aria-label="Move">
+            <i id="stick"></i>
           </div>
-          <button id="super-touch" data-copy="super" hidden>SUPER</button>
-          <button id="ollie-touch" data-copy="ollie" data-aria="ollie" aria-label="Ollie">
-            OLLIE ↑</button
-          ><button
-            id="fire-touch"
-            data-copy="throw"
-            data-aria="throw"
-            aria-label="Hold to charge; release to throw"
-          >
-            THROW ↗
-          </button>
+          <button id="fire-touch" data-aria="throw" aria-label="Hold to aim; release to throw">THROW</button>
+          <button id="ollie-touch" data-aria="ollie" aria-label="Ollie">OLLIE</button>
+          <button id="push-touch" data-aria="push" aria-label="Push">PUSH</button>
+          <button id="item-touch" data-aria="item" aria-label="Switch item" data-item="bottle">ITEM</button>
+          <button id="skip-touch" data-aria="skip" aria-label="Skip">SKIP</button>
         </div>
-        <button id="mobile-pause" data-aria="pause" aria-label="Pause PIPELINE" hidden>Ⅱ</button>
         <section id="dialog" hidden class="dialog-backdrop">
-          <div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-            <p id="dialog-kicker" class="eyebrow">PIPELINE</p>
+          <div id="dialog-card" class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabindex="-1">
+            <p class="dialog-kicker">PIPELINE</p>
             <h2 id="dialog-title"></h2>
             <div id="dialog-body"></div>
+            <div id="results" hidden></div>
             <div id="settings" hidden></div>
             <div class="dialog-actions">
               <button id="dialog-primary" class="primary"></button
@@ -83,10 +97,6 @@
           </div>
         </section>
       </main>
-      <footer>
-        <span class="equalizer">▂ ▅ ▃ ▆</span><span id="track-label"></span
-        ><span data-copy="titleTicker"></span>
-      </footer>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

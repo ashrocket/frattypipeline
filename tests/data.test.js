@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { S, C, BIG_CALLOUTS } from '../src/data/strings.js';
-import { HOUSES } from '../src/data/houses.js';
-import { LOOKS } from '../src/data/looks.js';
+import { HOUSES, SHOPS, FLEE, LIT, BEES } from '../src/data/houses.js';
+import { LOOKS, BONUS_SKATERS } from '../src/data/looks.js';
 import { handleQueueRequest } from '../server/http.mjs';
 import { AdmissionQueue } from '../server/queue.mjs';
 test('public queue status is read-only, cached and contains no tokens', async () => {
@@ -23,7 +23,7 @@ test('public queue status is read-only, cached and contains no tokens', async ()
   assert.ok(player.token);
 });
 test('copy lint rejects retired terms, real Greek pairs, artist and long big callouts', () => {
-  const copy = JSON.stringify({ S, C, HOUSES });
+  const copy = JSON.stringify({ S, C, HOUSES, SHOPS, FLEE, LIT, BEES, BONUS_SKATERS });
   const banned =
     /groucho|sorority girl|one of the sisters|delta daddy|\bbasic\b|demure|girl dinner|tradwife|mob wife|pick-me|Karen|gyatt|skibidi|\bOhio\b|fanum tax|6-7|Stanley|Labubu|\bbrat\b|Patagonia|Venmo|LinkedIn|White Claw/i;
   assert.doesNotMatch(copy, banned);
@@ -32,14 +32,11 @@ test('copy lint rejects retired terms, real Greek pairs, artist and long big cal
     HOUSES.map((h) => h.letters),
     letters,
   );
-  for (const text of [
-    ...BIG_CALLOUTS,
-    ...HOUSES.map((h) => h.ko),
-    ...S.comeback,
-    ...Object.values(S.superHints),
-    ...Object.values(S.hints).flat(),
-  ])
+  for (const text of [...BIG_CALLOUTS, ...HOUSES.map((h) => h.ko), ...SHOPS.map((s) => `UNLOCKED: ${s.item}`)])
     assert.ok(text.length <= 24, text);
+  // The game is PIPELINE; Greek Row is only the street.
+  assert.equal(S.brand, 'PIPELINE');
+  assert.match(readFileSync('index.html', 'utf8'), /<title>PIPELINE<\/title>/);
   for (const pair of [
     'ΑΕ',
     'ΒΥ',

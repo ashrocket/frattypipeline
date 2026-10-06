@@ -2,437 +2,484 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { GameModel, seededRandom } from '../src/model.js';
-import { STEP, BEAT_S } from '../src/data/tuning.js';
-import { spawnBro, telegraph, updateEnemies } from '../src/sim/enemies.js';
-import { pushProtected, addMakeover } from '../src/sim/player.js';
-import { impact, startCharge, release } from '../src/sim/throw.js';
-import { judge } from '../src/sim/beat.js';
-function run(seed = 1) {
-  const m = new GameModel(seededRandom(seed));
+import { STEP, TUNING as T, SCORE, BEAT_S } from '../src/data/tuning.js';
+import { HOUSES, SHOPS } from '../src/data/houses.js';
+import { BONUS_SKATERS } from '../src/data/looks.js';
+import { ROW, LAP, near, Z } from '../src/sim/row.js';
+import {
+  STATE,
+  stateFor,
+  igniteBro,
+  houseIgnite,
+  damage,
+  updateHouse,
+  beehive,
+} from '../src/sim/house.js';
+import { aim, release, targetOn } from '../src/sim/throw.js';
+import { startLap } from '../src/sim/street.js';
+import { startBonus } from '../src/sim/bonus.js';
+
+function run(seed = 1, options = {}) {
+  const m = new GameModel(seededRandom(seed), options);
   m.start();
-  advance(m, 8 * BEAT_S + STEP);
-  m.houses[0].state = 'open';
-  m.houses[0].guard = false;
-  m.enemies = [];
-  m.attacks = [];
-  m.houses[0].porchBeat = 10000;
+  advance(m, 1.9);
+  m.hazards = [];
   return m;
 }
 function advance(m, seconds, input = {}) {
   for (let i = 0; i < Math.round(seconds / STEP); i++) m.tick(STEP, input);
 }
-function press(m, action, down = true, beat = m.beat) {
-  m.enqueue(action, down, beat);
-  m.tick(STEP);
+const events = (m, type) => m.drainEvents().filter((e) => e.type === type);
+// Put the player in front of house h, rolling, in the given lane.
+function approach(m, h, ahead = 9, z = -2.4, vx = T.roll) {
+  m.player.x = near(h.s, m.player.x) - ahead;
+  if (m.player.x < 0) m.player.x += LAP;
+  m.player.z = z;
+  m.player.vx = vx;
 }
-const near = (a, b, epsilon = 1e-7) => assert.ok(Math.abs(a - b) < epsilon, `${a} != ${b}`);
-test('run starts at x6; 12 arenas, three districts, authored A/C waves and boss bars', () => {
-  const m = new GameModel();
-  assert.equal(m.player.x, 6);
-  assert.equal(m.houses.length, 12);
-  assert.deepEqual(
-    m.houses.filter((h) => h.bars > 1).map((h) => [h.id, h.bars]),
-    [
-      [3, 2],
-      [7, 2],
-      [11, 3],
-    ],
-  );
-  assert.equal(m.houses[4].x, 164);
-  assert.equal(m.houses[8].x, 314);
-  for (const stand of m.coffeeStands.filter((s) => !s.boss))
-    assert.ok(m.houses.every((h) => Math.abs(h.x - stand.x) > 9));
-  m.start();
-  advance(m, 2);
-  assert.equal(m.phase, 'countin');
-  assert.equal(m.player.x, 6);
-  advance(m, 1);
-  assert.equal(m.arena.id, 0);
-});
-test('neutral does not auto-scroll; exact coasting and bounded depth', () => {
-  const m = run();
-  const x = m.player.x;
-  advance(m, 1);
-  near(m.player.x, x);
-  advance(m, 1, { x: 1 });
-  assert.ok(m.player.vx > 6.49);
-  const vx = m.player.vx;
-  advance(m, 0.5, { x: 0 });
-  near(m.player.vx, vx * Math.exp(-0.6 * 0.5));
-  advance(m, 3, { x: -1, z: 1 });
-  assert.ok(m.player.vx < 0);
-  assert.equal(m.player.z, 4.3);
-});
-test('hold never repeats throws or pushes; overcharge costs exactly one bottle', () => {
-  const m = run();
-  m.player.x = 14;
-  advance(m, 2, { throw: true, push: true });
-  assert.equal(m.events.filter((e) => e.type === 'throw').length, 0);
-  assert.equal(m.events.filter((e) => e.type === 'fizzle').length, 1);
-  assert.equal(m.events.filter((e) => e.type === 'push').length, 1);
-  assert.ok(m.ammo >= 4 && m.ammo < 4.5);
-});
-test('throws outside arena are silent and free; far toss visibly falls short', () => {
-  const m = run();
-  m.arena = null;
-  const ammo = m.ammo;
-  press(m, 'throw');
-  press(m, 'throw', false);
-  assert.equal(m.projectiles.length, 0);
-  assert.equal(m.ammo, ammo);
-  m.arena = m.houses[0];
-  m.player.x = 14;
-  m.player.z = 3;
-  press(m, 'throw');
-  press(m, 'throw', false);
-  assert.equal(m.projectiles[0].toZ, -4.8);
-  advance(m, 1);
-  assert.equal(m.houses[0].hp, m.houses[0].maxHp);
-  assert.ok(m.events.some((e) => e.type === 'miss'));
-});
-test('fixed aim lead does not move with beat phase; impact is on the beat during freezes', () => {
-  const m = run();
-  m.player.x = 12;
-  m.player.vx = 2;
-  press(m, 'throw');
-  const target = m.aim().x;
-  const playerX = m.player.x,
-    velocity = m.player.vx;
-  m.beat += 0.4;
-  near(m.aim().x, target);
-  press(m, 'throw', false);
-  const b = m.projectiles[0];
-  near(b.toX, playerX + velocity * 0.6);
-  m.freeze(2);
-  const x = m.player.x;
-  while (m.projectiles.length) m.tick(STEP);
-  near(m.player.x, x);
-  const e = m.events.find((e) => ['impact', 'miss'].includes(e.type));
-  assert.ok(Math.abs(e.atBeat - b.landBeat) * BEAT_S <= STEP + 1e-6);
-});
-test('lob and air mail have distinct charge, reach and guard contracts', () => {
-  const m = run();
-  m.player.x = 14;
-  m.player.z = 3;
-  press(m, 'throw');
-  advance(m, 0.42);
-  press(m, 'throw', false);
-  assert.equal(m.projectiles[0].kind, 'lob');
-  assert.equal(m.projectiles[0].damage, 2);
-  m.houses[0].guard = true;
-  const hp = m.houses[0].hp;
-  impact(m, { houseId: 0, toX: 14, toZ: -6.6, kind: 'lob', damage: 2, timing: 1 });
-  assert.equal(m.houses[0].hp, hp);
-  impact(m, { houseId: 0, toX: 15, toZ: -6.6, kind: 'air', damage: 1.5, timing: 1 });
-  near(m.houses[0].hp, hp - 1.5);
-});
-test('ollie preserves 8.4/24 arc, landing lag and permits throwing in lag', () => {
-  const m = run();
-  press(m, 'ollie');
-  assert.equal(m.player.onBoard, false);
-  advance(m, 19 / 60);
-  near(m.player.jumpHeight, 8.4 / 3 - 12 / 9);
-  advance(m, 22 / 60);
-  assert.equal(m.player.jumpHeight, 0);
-  assert.ok(m.player.landingLag > 0);
-  press(m, 'throw');
-  assert.ok(m.charge);
-  advance(m, 0.12);
-  press(m, 'ollie');
-  assert.ok(m.player.jumpHeight > 0);
-});
-test('push has startup, protection and recovery; held input cannot repeat', () => {
-  const m = run();
-  press(m, 'push');
-  assert.equal(pushProtected(m.player), false);
-  advance(m, 0.083);
-  assert.equal(pushProtected(m.player), true);
-  advance(m, 0.26);
-  assert.equal(pushProtected(m.player), false);
-  assert.ok(m.player.pushCooldown > 1);
-});
-test('100ms input buffer and hit-stop retain presses until executable', () => {
-  const m = run();
-  m.player.landingLag = 0.075;
-  press(m, 'ollie');
-  assert.equal(m.player.jumpHeight, 0);
-  advance(m, 0.1);
-  assert.ok(m.player.jumpHeight > 0);
-  const n = run();
-  n.freeze(0.15);
-  press(n, 'ollie');
-  advance(n, 0.15);
-  assert.ok(n.player.jumpHeight > 0);
-  assert.equal(n.events.filter((e) => e.type === 'ollie').length, 1);
-});
-test('LOW parry takes precedence at 100ms, 15ms is a hit; MID push startup is vulnerable', () => {
-  for (const [age, expected] of [
-    [0.1, 'parry'],
-    [0.015, 'hit'],
-  ]) {
-    const m = run();
-    const e = spawnBro(m, 'lax');
-    e.age = 2;
-    e.state = 'active';
-    e.x = m.player.x;
-    e.z = m.player.z;
-    const a = telegraph(m, e);
-    Object.assign(a, {
-      state: 'active',
-      timer: 0.18,
-      tellAge: 1,
-      age: 1,
-      visibleAge: 2,
-      x: m.player.x,
-      z: m.player.z,
-    });
-    m.player.jumpAt = m.motionTime - age;
-    m.player.jumpHeight = 0.1;
-    m.player.jumpVelocity = 8;
-    updateEnemies(m, STEP);
-    assert.ok(
-      m.events.some((ev) => ev.type === expected),
-      expected,
-    );
-  }
-  const m = run();
-  m.player.pushAge = 0.05;
-  assert.equal(addMakeover(m, 15, { id: 1, age: 1, tellAge: 1 }), true);
-});
-test('invulnerability does not consume hazards; keg wipeout grants no invulnerability', () => {
-  const m = run();
-  const a = telegraph(m, { id: 30, x: m.player.x, z: m.player.z, age: 2 }, 'keg');
-  Object.assign(a, {
-    state: 'active',
-    timer: 0.4,
-    x: m.player.x,
-    targetX: m.player.x,
-    targetZ: m.player.z,
-    tellAge: 2,
-    age: 2,
+// Throw item at house h landing exactly at world x (bypasses timing for rule tests).
+function throwAt(m, h, item, landX) {
+  m.item = item;
+  if (item !== 'bottle') m.items[item] = 3;
+  const hx = near(h.s, m.player.x);
+  const t = targetOn(m, h, hx, item, landX);
+  m.projectiles.push({
+    id: ++m.id,
+    item,
+    fromX: m.player.x,
+    fromZ: m.player.z,
+    fromY: 1.4,
+    toX: landX,
+    toZ: t?.z ?? -6.6,
+    toY: t?.y ?? 0,
+    t: 0,
+    flight: 0.3,
+    house: h.id,
+    air: false,
+    locked: true,
   });
-  m.player.invulnerable = 1;
-  updateEnemies(m, STEP);
-  assert.ok(m.attacks.includes(a));
-  assert.equal(m.player.pipeline, 0);
-  m.player.invulnerable = 0;
-  assert.equal(addMakeover(m, 8, a, 'keg'), true);
-  assert.equal(m.player.invulnerable, 0);
-  assert.equal(m.player.wipeout, 0.7);
+  advance(m, 0.35);
+}
+const isolate = (m) => {
+  for (const h of m.houses) h.bros = [];
+};
+
+test('the Row: twelve fictional houses, five shops after every second house, one loop', () => {
+  const m = new GameModel();
+  assert.equal(m.houses.length, 12);
+  assert.equal(ROW.shops.length, 5);
+  assert.equal(LAP, 298);
+  assert.deepEqual(
+    ROW.shops.map((s) => ROW.houses.findIndex((h) => h.lot[1] === s.lot[0])),
+    [1, 3, 5, 7, 9],
+  );
+  assert.equal(HOUSES.filter((h) => h.couch).length, 5);
+  for (const h of m.houses) assert.ok(h.bros.length >= 3 && h.bros.length <= 6);
 });
-test('finance pitch keeps sprites apart; pong flees on release without bottle contact', () => {
-  const m = run();
-  const sniper = spawnBro(m, 'pong');
-  m.player.x = 14;
-  press(m, 'throw');
-  press(m, 'throw', false);
-  assert.equal(sniper.state, 'flee');
-  const bro = spawnBro(m, 'vest');
-  bro.state = 'active';
-  bro.x = m.player.x;
-  bro.z = m.player.z;
-  m.player.pitchLock = 1;
-  updateEnemies(m, STEP);
-  assert.ok(Math.hypot(bro.x - m.player.x, bro.z - m.player.z) >= 1);
-});
-test('makeover ends on downbeat, comeback adds no damage and third makeover offers continue', () => {
-  const m = run();
-  for (let life = 3; life > 0; life--) {
-    m.phase = 'playing';
-    m.player.pipeline = 100;
-    m.transform();
-    const end = m.transformEnd;
-    assert.equal(end % 4, 0);
-    assert.ok(end - m.beat >= 6);
-    while (m.phase === 'transform') m.tick(STEP);
-    assert.equal(m.lives, life - 1);
-    if (life > 1) {
-      assert.equal(m.riot, 100);
-      assert.equal(m.player.pipeline, 0);
-      assert.equal(m.player.invulnerable, 2);
-      assert.equal(m.maxAmmo, 6 + (3 - life));
-    }
+
+test('owner rule: standing still gets you captured; neutral rolling never does', () => {
+  const still = run();
+  let captured = null;
+  for (let i = 0; i < 60 * 8 && !captured; i++) {
+    still.tick(STEP, { x: -1 });
+    captured = still.drainEvents().find((e) => e.type === 'captured');
   }
+  assert.ok(captured, 'braking to a stop must end in capture');
+  assert.ok(captured.time < 1.9 + 6, `captured at ${captured.time}`);
+  const rolling = run(2);
+  for (let i = 0; i < 60 * 60; i++) {
+    rolling.hazards = [];
+    rolling.carts = [];
+    for (const h of rolling.houses) h.fd = null;
+    rolling.tick(STEP, {});
+  }
+  assert.equal(rolling.stats.captures, 0);
+  assert.ok(rolling.player.vx >= T.roll - 1e-6);
+});
+
+test('the horde warns before it captures, and wipeouts let it close in', () => {
+  const m = run(3);
+  m.hazards = [{ id: 1, kind: 'keg', s: (m.player.x + 3) % LAP, z: m.player.z, hx: 0.35, hz: 0.35, h: 0.6, rolling: false }];
+  advance(m, 1.5);
+  assert.equal(m.stats.wipeouts, 1);
+  assert.ok(m.horde.gap < T.hordeGap);
+  const brake = run(4);
+  const seen = [];
+  for (let i = 0; i < 60 * 8 && brake.phase === 'playing'; i++) {
+    brake.tick(STEP, { x: -1 });
+    seen.push(...brake.drainEvents().map((e) => e.type));
+  }
+  assert.ok(seen.indexOf('warn') >= 0 && seen.indexOf('warn') < seen.indexOf('captured'));
+});
+
+test('owner rule: a hit lights the can; a miss lids it and the house must be revisited next lap', () => {
+  const m = run(5);
+  isolate(m);
+  const h = m.houses[1];
+  approach(m, h);
+  const canX = near(h.s, m.player.x) + h.can.dx;
+  throwAt(m, h, 'bottle', canX + 3);
+  assert.equal(h.can.state, 'lidded');
+  assert.equal(h.comeBack, true);
+  assert.equal(events(m, 'miss').length, 1);
+  // A lidded can is no longer a target this lap.
+  m.item = 'bottle';
+  assert.notEqual(aim(m).house, 1);
+  startLap(m, 2);
+  assert.equal(h.can.state, 'ready');
+  assert.equal(h.comeBack, false);
+  throwAt(m, h, 'bottle', near(h.s, m.player.x) + h.can.dx);
+  assert.equal(h.can.state, 'burning');
+  assert.equal(m.stats.cansLit, 1);
+});
+
+test('throw release lands where the reticle said, leading with your speed', () => {
+  const m = run(6);
+  isolate(m);
+  const h = m.houses[2];
+  approach(m, h, 12, -2.4, 6);
+  m.item = 'bottle';
+  m.enqueue('throw', true);
+  advance(m, STEP);
+  const a = aim(m);
+  assert.equal(a.house, 2);
+  const predicted = m.player.x + m.player.vx * a.flight;
+  assert.ok(Math.abs(a.landX - predicted) < 1e-6);
+  m.enqueue('throw', false);
+  advance(m, STEP);
+  assert.equal(m.projectiles.length, 1);
+  assert.equal(m.bottles, T.bottles - 1);
+});
+
+function ignitionRate(drunk, trials = 400) {
+  let lit = 0;
+  for (let seed = 1; seed <= trials; seed++) {
+    const m = new GameModel(seededRandom(seed));
+    const h = m.houses[0];
+    h.bros = h.bros.slice(0, 1);
+    const b = h.bros[0];
+    Object.assign(b, { drunk, ext: 0, state: 'gawk', dx: h.can.dx + 0.5, z: h.can.z, t: 99 });
+    b.tx = b.dx;
+    b.tz = b.z;
+    h.can.state = 'burning';
+    h.can.fuel = 99;
+    for (let i = 0; i < 60; i++) updateHouse(m, h, STEP);
+    if (b.state === 'burning' || b.state === 'inside') lit++;
+  }
+  return lit / trials;
+}
+test('owner rule: bros near burning cans catch fire, drunk ones far more readily', () => {
+  const drunk = ignitionRate(1),
+    sober = ignitionRate(0);
+  // One second next to the fire: 1 - e^-0.8 ≈ 0.55 drunk, 1 - e^-0.25 ≈ 0.22 sober.
+  assert.ok(drunk > 0.45 && drunk < 0.65, `drunk ${drunk}`);
+  assert.ok(sober > 0.14 && sober < 0.3, `sober ${sober}`);
+});
+
+test('owner rule: burning bros take the fire into the Greek house', () => {
+  const m = new GameModel(seededRandom(9));
+  const h = m.houses[3];
+  const b = h.bros[0];
+  for (const other of h.bros) other.ext = 0; // isolate the rule from extinguishers
+  igniteBro(m, h, b);
+  b.mode = 'door';
+  b.burn = 10;
+  let fire = false;
+  for (let i = 0; i < 60 * 6 && !fire; i++) {
+    updateHouse(m, h, STEP);
+    fire = h.fire > 0;
+  }
+  assert.ok(fire);
+  assert.equal(b.state, 'inside');
+});
+
+function extinguishRate(drunk, difficulty = 'medium', trials = 300) {
+  let out = 0;
+  for (let seed = 1; seed <= trials; seed++) {
+    const m = new GameModel(seededRandom(seed), { difficulty });
+    const h = m.houses[5];
+    const [sprayer, victim] = h.bros;
+    h.bros = [sprayer, victim];
+    h.couch = false;
+    Object.assign(sprayer, { drunk, ext: 6, state: 'spray', dx: 0, z: -7 });
+    igniteBro(m, h, victim);
+    Object.assign(victim, { mode: 'roll', burn: 99, dx: 1.4, z: -7 });
+    victim.immune = 0;
+    const rollOut = T.rollOut;
+    for (let i = 0; i < 60; i++) {
+      // Isolate the extinguisher: no self-rolling out.
+      if (victim.state === 'burning') victim.mode = 'zig';
+      victim.dx = 1.4;
+      victim.z = -7;
+      victim.t = 99;
+      updateHouse(m, h, STEP);
+    }
+    void rollOut;
+    if (victim.state === 'charred') out++;
+  }
+  return out / trials;
+}
+test('owner rule: drunk party frats are much worse with fire extinguishers', () => {
+  const sober = extinguishRate(0),
+    drunk = extinguishRate(1);
+  assert.ok(sober > 0.6, `sober ${sober}`);
+  assert.ok(drunk < sober / 2, `drunk ${drunk} vs sober ${sober}`);
+  // Easy Street makes everyone clumsier, and the drunk/sober gap still holds.
+  const easySober = extinguishRate(0, 'easy'),
+    easyDrunk = extinguishRate(1, 'easy');
+  assert.ok(easySober < sober, `easy sober ${easySober} vs ${sober}`);
+  assert.ok(easyDrunk < easySober / 2, `easy drunk ${easyDrunk} vs sober ${easySober}`);
+});
+
+test('owner rule: couch houses get the fire department exactly 15% of the time; others never', () => {
+  let rescues = 0;
+  const trials = 2000;
+  for (let seed = 1; seed <= trials; seed++) {
+    const m = new GameModel(seededRandom(seed));
+    const couch = m.houses.find((h) => h.couch);
+    houseIgnite(m, couch, 'test');
+    if (couch.fd) rescues++;
+    const plain = m.houses.find((h) => !h.couch);
+    houseIgnite(m, plain, 'test');
+    assert.equal(plain.fd, null);
+  }
+  const rate = rescues / trials;
+  // Binomial(2000, 0.15): sd ≈ 0.008; allow 4 sd.
+  assert.ok(Math.abs(rate - 0.15) < 0.032, `fire department rate ${rate}`);
+});
+
+test('the fire department rescues the house: fire out, bros doused, damage kept', () => {
+  const m = new GameModel(seededRandom(11));
+  const h = m.houses.find((x) => x.couch);
+  h.fd = null;
+  damage(m, h, 30, 'test');
+  h.fire = 0.5;
+  h.fd = { stage: 'coming', t: T.fdDelay };
+  igniteBro(m, h, h.bros[0]);
+  h.bros[0].mode = 'zig';
+  for (let i = 0; i < 60 * 6; i++) updateHouse(m, h, STEP);
+  assert.equal(h.fire, 0);
+  assert.notEqual(h.bros[0].state, 'burning');
+  assert.ok(h.integrity < 70 && h.integrity > 0);
+  assert.ok(m.drainEvents().some((e) => e.type === 'fdRescue'));
+});
+
+test('owner rule: four destruction states and escalating points per destroyed house', () => {
+  assert.equal(stateFor(100), STATE.untouched);
+  assert.equal(stateFor(75), STATE.harmed);
+  assert.equal(stateFor(40), STATE.reallyHarmed);
+  assert.equal(stateFor(0), STATE.gone);
+  const m = new GameModel(seededRandom(12));
+  const scores = [];
+  for (const id of [4, 0, 7]) {
+    const before = m.score;
+    damage(m, m.houses[id], 100, 'test');
+    scores.push(m.score - before);
+  }
+  const levels = SCORE.harmed + SCORE.reallyHarmed;
+  assert.deepEqual(scores, [1, 2, 3].map((n) => levels + SCORE.gone * n));
+  // Events carry what was actually scored, route multiplier included.
+  const hard = new GameModel(seededRandom(12), { difficulty: 'hard' });
+  damage(hard, hard.houses[4], 100, 'test');
+  igniteBro(hard, hard.houses[0], hard.houses[0].bros[0]);
+  const scored = hard.drainEvents();
+  assert.equal(scored.find((e) => e.type === 'houseGone').points, SCORE.gone * 3);
+  assert.equal(scored.find((e) => e.type === 'broLit').points, SCORE.bro * 3);
+  assert.deepEqual(
+    m.drainEvents()
+      .filter((e) => ['harmed', 'reallyHarmed', 'houseGone'].includes(e.type))
+      .map((e) => e.type)
+      .slice(0, 3),
+    ['harmed', 'reallyHarmed', 'houseGone'],
+  );
+});
+
+test('bees through a window empty the house, and an empty house rots away', () => {
+  const m = run(13);
+  const h = m.houses[5];
+  approach(m, h);
+  const w = h.facade.windows[0];
+  throwAt(m, h, 'bees', near(h.s, m.player.x) + w.dx);
+  assert.equal(h.empty, true);
+  const fired = m.drainEvents();
+  assert.ok(fired.some((e) => e.type === 'houseEmpty' && e.house === h.id), 'the house emptying is its own event');
+  assert.ok(!fired.some((e) => e.type === 'empty'), "'empty' means out of bottles (a dud at the skater)");
+  advance(m, 3);
+  assert.ok(h.bros.every((b) => ['flee', 'away'].includes(b.state)));
+  let seconds = 0;
+  while (!h.gone && seconds < 60) {
+    for (let i = 0; i < 60; i++) updateHouse(m, h, STEP);
+    seconds++;
+  }
+  assert.ok(h.gone, 'rot must finish the house');
+  assert.equal(h.cause, 'rot');
+  assert.ok(seconds >= 30 && seconds <= 50, `rotted in ${seconds}s`);
+});
+
+test('each shop unlocks its own bonus destruction method when you roll through it (beehives via Bee Alley)', () => {
+  const m = run(14);
+  isolate(m);
+  for (const place of ROW.shops.slice(1)) {
+    m.player.x = near(place.s, m.player.x) - 3;
+    m.player.z = -3.6;
+    advance(m, 1.2);
+  }
+  assert.deepEqual(Object.keys(m.unlocked).sort(), ['balloons', 'fryer', 'raccoons', 'sub']);
+  for (const shop of SHOPS.slice(1)) assert.equal(m.items[shop.kind], shop.stock);
+  m.player.x = near(ROW.shops[0].s, m.player.x) - 3;
+  m.player.z = -3.6;
+  advance(m, 1.2);
+  assert.equal(m.level, 'alley');
+});
+
+test('subwoofer: sixteen beats of bass damage; turkey fryer: fireball when fire comes close', () => {
+  const m = run(15);
+  isolate(m);
+  const h = m.houses[6];
+  approach(m, h);
+  throwAt(m, h, 'sub', near(h.s, m.player.x));
+  assert.ok(h.sub);
+  advance(m, 17 * BEAT_S + 0.5);
+  assert.equal(h.sub, null);
+  assert.ok(Math.abs(h.integrity - (100 - 16 * T.subDamage)) < 1e-6);
+  const g = m.houses[8];
+  approach(m, g);
+  throwAt(m, g, 'fryer', near(g.s, m.player.x) + g.facade.door.dx);
+  assert.ok(g.fryer);
+  const before = g.integrity;
+  houseIgnite(m, g, 'test', 0.1);
+  updateHouse(m, g, STEP);
+  assert.equal(g.fryer, null);
+  assert.ok(before - g.integrity >= T.fryerDamage);
+  assert.ok(g.fire >= 0.6);
+});
+
+test('raccoons pop a slammed lid (undo a miss) and drag burning trash inside', () => {
+  const m = run(16);
+  isolate(m);
+  const h = m.houses[2];
+  h.couch = false;
+  approach(m, h);
+  const canX = near(h.s, m.player.x) + h.can.dx;
+  throwAt(m, h, 'bottle', canX + 3);
+  assert.equal(h.can.state, 'lidded');
+  throwAt(m, h, 'raccoons', canX);
+  assert.equal(h.can.state, 'ready');
+  assert.equal(h.comeBack, false);
+  throwAt(m, h, 'bottle', canX);
+  assert.equal(h.can.state, 'burning');
+  for (let i = 0; i < 60 * 3; i++) updateHouse(m, h, STEP);
+  assert.ok(h.fire > 0);
+  assert.equal(h.raccoons, null);
+});
+
+test('balloons: three bundles float an untouched house away; one is enough when really harmed', () => {
+  const m = run(17);
+  isolate(m);
+  const h = m.houses[9];
+  approach(m, h);
+  for (let i = 0; i < 3; i++) throwAt(m, h, 'balloons', near(h.s, m.player.x));
+  assert.equal(h.lifting, true);
+  for (let i = 0; i < 60 * (T.liftTime + 0.2); i++) updateHouse(m, h, STEP);
+  assert.equal(h.gone, true);
+  assert.equal(h.cause, 'airlift');
+  const g = m.houses[10];
+  damage(m, g, 65, 'test');
+  approach(m, g);
+  throwAt(m, g, 'balloons', near(g.s, m.player.x));
+  assert.equal(g.lifting, true);
+});
+
+test('owner rule: capture → next skater frees and tows the zombie to the ambulance → 10× bonus → resume', () => {
+  const m = run(18);
+  isolate(m);
+  for (let i = 0; i < 60 * 8 && m.phase === 'playing'; i++) m.tick(STEP, { x: -1 });
+  assert.equal(m.phase, 'captured');
+  const zombie = m.zombie;
+  advance(m, T.captureTime + STEP);
+  assert.equal(m.phase, 'rescue');
+  assert.equal(m.lives, 2);
+  assert.equal(m.player.crew, 1);
+  assert.ok(m.player.x < zombie.x);
+  // No throwing until the rescue is done.
+  m.enqueue('throw', true);
+  m.enqueue('throw', false);
+  advance(m, STEP * 2);
+  assert.equal(m.projectiles.length, 0);
+  assert.ok(m.drainEvents().some((e) => e.type === 'noThrow'));
+  // Steer onto the zombie, then into the ambulance.
+  for (let i = 0; i < 60 * 30 && m.phase === 'rescue'; i++) {
+    m.hazards = [];
+    m.carts = [];
+    const target = m.zombie.state === 'waiting' ? m.zombie : m.ambulance;
+    m.tick(STEP, { x: 1, z: Math.sign(target.z - m.player.z) * Math.min(1, Math.abs(target.z - m.player.z) * 2) });
+  }
+  assert.equal(m.stats.rescues, 1);
+  assert.equal(m.phase, 'rescued');
+  advance(m, 1.5);
+  assert.equal(m.phase, 'bonus');
+});
+
+test('owner rule: the 10× bonus is ten passes by ten different skaters from ten points of view', () => {
+  assert.equal(BONUS_SKATERS.length, 10);
+  assert.equal(new Set(BONUS_SKATERS.map((s) => s.name)).size, 10);
+  assert.equal(new Set(BONUS_SKATERS.map((s) => s.pov)).size, 10);
+  const m = run(19);
+  startBonus(m);
+  const before = m.score;
+  const seen = [];
+  for (let i = 0; i < 60 * 80 && m.phase === 'bonus'; i++) {
+    const b = m.bonus;
+    const release = b.stage === 'run' && !b.thrown && b.x >= -T.bonusSpeed * T.bonusFlight - 0.05;
+    m.tick(STEP, { throw: b.stage === 'run' && !release && !b.thrown ? true : false });
+    if (b.stage === 'card' && !seen.includes(b.pass)) seen.push(b.pass);
+  }
+  assert.equal(m.phase, 'resume');
+  assert.deepEqual(seen, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(m.bonus.hits, 10);
+  assert.equal(m.score - before, 10 * SCORE.bonusHit * SCORE.bonusMultiplier + SCORE.bonusPerfect);
+  advance(m, 1.5);
+  assert.equal(m.phase, 'playing');
+});
+
+test('last capture offers a continue that resets score and keeps the Row', () => {
+  const m = run(20);
+  damage(m, m.houses[0], 100, 'test');
+  m.lives = 1;
+  for (let i = 0; i < 60 * 8 && m.phase === 'playing'; i++) m.tick(STEP, { x: -1 });
+  advance(m, T.captureTime + STEP);
   assert.equal(m.phase, 'continue');
-  const end = m.continueEnd;
-  advance(m, 4 * BEAT_S);
-  assert.ok(m.continueEnd === end);
-  m.continueRun();
-  assert.equal(m.lives, 3);
+  m.enqueue('throw', true);
+  advance(m, STEP);
+  assert.equal(m.phase, 'playing');
   assert.equal(m.score, 0);
   assert.equal(m.continues, 1);
+  assert.equal(m.lives, 3);
+  assert.equal(m.houses[0].gone, true);
 });
-test('timer includes strips; TIME OVER heals only current chunk and resets to20', () => {
-  const m = run();
-  m.houses[0].timer = 0.01;
-  m.houses[0].chunkHp = 1;
-  m.houses[0].timerTell = { id: 88, age: 3, tellAge: 3 };
-  m.tick(STEP);
-  assert.equal(m.houses[0].timer, 20);
-  assert.equal(m.player.pipeline, 30);
-  near(m.houses[0].chunkHp, 1 + m.houses[0].chunkMax * 0.25);
-});
-test('coffee requires actual motion on ground and awards ammo once', () => {
-  const m = run(),
-    s = m.coffeeStands[0];
-  m.arena = null;
-  m.player.x = s.x;
-  m.player.z = s.z;
-  m.player.pipeline = 40;
-  m.ammo = 1;
-  m.updatePickups();
-  assert.equal(s.served, false);
-  m.player.vx = 1;
-  m.updatePickups();
-  assert.equal(s.served, true);
-  assert.equal(m.player.pipeline, 22);
-  assert.equal(m.ammo, 3);
-  m.updatePickups();
-  assert.equal(m.ammo, 3);
-});
-test('judging uses stamped input edges and groove rejects double presses', () => {
-  const m = run();
-  assert.equal(judge(m, 10 + 0.03 / BEAT_S).grade, 'tight');
-  assert.equal(judge(m, 11 + 0.07 / BEAT_S).grade, 'onbeat');
-  assert.equal(judge(m, 12 + 0.1 / BEAT_S).grade, 'off');
-  m.beatAssist = true;
-  assert.equal(judge(m, 13 + 0.1 / BEAT_S).grade, 'onbeat');
-  for (let b = 14; b < 18; b++) judge(m, b);
-  assert.ok(m.groove >= 4);
-  judge(m, 17.1);
-  assert.equal(m.groove, 0);
-});
-test('super emits six bottles but causes exactly five total damage and no Riot feedback', () => {
-  const m = run();
-  m.houses[0].chunkHp = m.houses[0].chunkMax = 20;
-  m.houses[0].hp = m.houses[0].maxHp = 40;
-  m.riot = 100;
-  press(m, 'super');
-  advance(m, 2);
-  assert.equal(m.houses[0].hp, 35);
-  assert.equal(m.riot, 0);
-});
-test('30/60/120 render rates and supplied ideal beats give byte-identical event logs for seeds1–20', () => {
-  function replay(seed, fps, supplied) {
-    const m = new GameModel(seededRandom(seed));
-    m.start();
-    let accumulator = 0,
-      steps = 0,
-      logs = [];
-    for (let frame = 0; frame < fps * 360; frame++) {
-      if (['won', 'lost', 'continue'].includes(m.phase)) break;
-      accumulator += 1 / fps;
-      while (accumulator >= STEP - 1e-9) {
-        const input = {
-          x: Math.sin(steps / 120),
-          z: Math.cos(steps / 100),
-          throw: steps % 60 < 25,
-          ollie: steps % 54 === 0,
-          push: steps % 130 === 0,
-          pressBeat: m.beat,
-        };
-        if (supplied) input.beat = ((steps + 1) * STEP) / BEAT_S;
-        m.tick(STEP, input);
-        steps++;
-        accumulator -= STEP;
-        logs.push(...m.drainEvents());
-      }
+
+function journal(seed, frameDt) {
+  const m = new GameModel(seededRandom(seed));
+  m.start();
+  const hash = createHash('sha256');
+  let acc = 0,
+    ticks = 0;
+  while (ticks < 40 * 60) {
+    acc += frameDt;
+    while (acc + 1e-9 >= STEP && ticks < 40 * 60) {
+      const phase = Math.floor(m.time * 2) % 6;
+      m.tick(STEP, { x: phase < 4 ? 1 : 0, z: phase % 2 ? -1 : 0.4, throw: phase === 1 });
+      acc -= STEP;
+      ticks++;
     }
-    return createHash('sha256').update(JSON.stringify(logs)).digest('hex');
+    for (const e of m.drainEvents()) hash.update(JSON.stringify(e));
   }
-  for (let seed = 1; seed <= 20; seed++) {
-    const baseline = replay(seed, 60, false);
-    for (const fps of [30, 60, 120])
-      for (const beat of [false, true])
-        assert.equal(replay(seed, fps, beat), baseline, `seed${seed}, fps${fps}, beat${beat}`);
-  }
-});
-
-test('calibration changes judging only, never charge class, aim lead or flight duration', () => {
-  for (const offset of [-0.4, 0, 0.4]) {
-    const m = run();
-    m.player.x = 14;
-    const raw = m.beat;
-    startCharge(m, raw - offset / BEAT_S, raw);
-    m.beat = raw + 0.39 / BEAT_S;
-    release(m, raw + (0.39 - offset) / BEAT_S, raw + 0.39 / BEAT_S);
-    assert.equal(m.projectiles[0].kind, 'toss');
-    assert.equal(m.projectiles[0].landBeat, Math.ceil(raw + 0.39 / BEAT_S + 1.5));
-  }
-});
-test('a timely release buffered during hitstop cannot fizzle while waiting', () => {
-  const m = run();
-  m.player.x = 14;
-  press(m, 'throw');
-  advance(m, 1.65);
-  m.freeze(0.4);
-  m.tick(STEP, { edges: [{ action: 'throw', down: false, beat: m.beat, rawBeat: m.beat }] });
-  advance(m, 0.5);
-  assert.equal(m.events.filter((e) => e.type === 'fizzle').length, 0);
-  assert.equal(m.events.filter((e) => e.type === 'throw').length, 1);
-});
-test('media-element fallback widens judging without changing normal windows', () => {
-  const m = run();
-  assert.equal(judge(m, 10 + 0.1 / BEAT_S).grade, 'off');
-  m.timingWindowExtra = 0.025;
-  assert.equal(judge(m, 11 + 0.1 / BEAT_S).grade, 'onbeat');
-});
-
-test('a throw buffered across a long freeze launches after thaw and still lands on its beat', () => {
-  const m = run();
-  m.player.x = 14;
-  press(m, 'throw');
-  advance(m, 0.1);
-  m.freeze(1.2);
-  m.tick(STEP, { edges: [{ action: 'throw', down: false, beat: m.beat, rawBeat: m.beat }] });
-  advance(m, 1.3);
-  const bottle = m.projectiles[0];
-  assert.ok(bottle && bottle.landBeat > m.beat);
-  while (m.projectiles.length) m.tick(STEP);
-  const event = m.events.find((e) => e.type === 'impact');
-  assert.ok(event && Math.abs(event.atBeat - bottle.landBeat) * BEAT_S <= STEP + 1e-6);
-});
-
-test('new runs and continues clear transformation, super and final-phase residue', () => {
-  const m = run();
-  m.ripped = true;
-  m.bannerUntil = 999;
-  m.superPending = true;
-  m.reset();
-  assert.equal(m.ripped, false);
-  assert.equal(m.bannerUntil, 0);
-  assert.equal(m.superPending, false);
-  m.houses.slice(0, 11).forEach((h) => (h.burned = true));
-  m.burned = 11;
-  m.phase = 'continue';
-  m.arena = m.houses[11];
-  m.arena.phase = 2;
-  m.arena.timer = 1;
-  m.arena.deadAir = 30;
-  m.conveyor = { age: 10 };
-  m.superPending = true;
-  m.continueRun();
-  assert.equal(m.arena.phase, 0);
-  assert.equal(m.arena.timer, 90);
-  assert.equal(m.arena.deadAir, 0);
-  assert.equal(m.conveyor, null);
-  assert.equal(m.superPending, false);
-});
-
-test('final KO finishes its400ms freeze and900ms slow-motion before the win screen', () => {
-  const m = run();
-  m.houses.slice(0, 11).forEach((h) => (h.burned = true));
-  m.burned = 11;
-  const h = m.houses[11];
-  h.chunk = 5;
-  h.chunkHp = 1;
-  h.lockAt = m.time;
-  m.arena = h;
-  m.damageHouse(h, 1);
-  assert.equal(m.phase, 'ko');
-  advance(m, 1.25);
-  assert.equal(m.phase, 'ko');
-  advance(m, 0.1);
-  assert.equal(m.phase, 'won');
-  assert.equal(m.burned, 12);
+  return hash.digest('hex');
+}
+test('seeded runs are deterministic and identical at 30, 60 and 120 Hz displays', () => {
+  const a = journal(21, 1 / 60);
+  assert.equal(a, journal(21, 1 / 60));
+  assert.equal(a, journal(21, 1 / 30));
+  assert.equal(a, journal(21, 1 / 120));
+  assert.notEqual(a, journal(22, 1 / 60));
 });

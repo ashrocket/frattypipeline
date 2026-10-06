@@ -1,8 +1,19 @@
 # PIPELINE
 
-A player-paced skateboard arena fighter in a fictional twelve-house Greek Row.
-Choose your own look; fight the institution trying to replace it with a uniform.
-No account, Spotify connection, external art, or runtime library is required.
+A momentum skateboard scroller on Greek Row: a 1988 arcade cabinet repainted in
+2026, with Paperboy's routes and newspaper, Alto's one-button backflips and Tony
+Hawk combos. Keep rolling, sink flaming bottles into frat trash cans, and let the
+chaos spread house to house. Stop rolling and the Pipeline — a beige horde of
+quarter-zip recruiters — turns you into a zombie.
+
+Pick any of the eight Ivy League campuses as the setting. **Every chapter on the
+Row is fictional** (satire; not affiliated with or endorsed by any university), and
+real fraternities are deliberately not used. School names are real; before any
+public deployment, consider switching them to parody names (one file:
+`src/data/campuses.js`).
+
+No account, Spotify connection, external art, font or runtime library is required.
+The full design is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Run locally
 
@@ -17,24 +28,57 @@ preview cannot enforce the queue. Never stop another reviewer's development serv
 
 ## Play
 
-Move with arrows/WASD, hold **J/F** to charge and release to throw, **K/Space** to
-ollie, **L/Shift** to push, and **P/Escape** to pause. On gamepad: left stick/D-pad,
-A ollie, X/RT throw, B/RB push, Y super, Start pause. Touch supports a move stick
-with a forward flick for PUSH and independent THROW, OLLIE and SUPER touches.
+| | Keyboard | Gamepad | Touch |
+| --- | --- | --- | --- |
+| Kick (speed up) | hold → (D) | stick / D-pad right | stick right |
+| Slow down · powerslide | hold ← (A) | stick / D-pad left | stick left |
+| Carve lanes | ↑ / ↓ (W / S) | stick, D-pad | stick up / down |
+| Light & throw | **hold T** (or F, J), release | X or RT | hold THROW |
+| Ollie · hold in the air: backflip | Space (or K) | A | OLLIE |
+| Flip tricks (in the air) | tap ↑ ↓ ← → | D-pad / stick flick | flick the stick |
+| Power kick · grab (in the air) | Shift (or L) | B or RB | PUSH |
+| Switch item | Q or E | Y or LB | ITEM |
+| Skip training / next day | Enter | Select | SKIP |
+| Pause | P or Esc | Start | Ⅱ |
 
-There is no auto-scroll or auto-fire. Read orange telegraphs: carve out of HIGH,
-ollie over LOW, push through MID. School the crews to disable lawn sprinklers,
-then aim at the house with the landing reticle. Bottles never hit people. A short
-charge tosses from the lawn half; 400 ms charges a lob; release high in an ollie
-for AIR MAIL. Holding beyond 1.8 seconds wastes a bottle. Beat-timed releases,
-bullseyes and counters reward deliberate play. Full Riot unlocks TOUCH GRASS.
+- **Skate school first.** A 45-second course on the campus quad teaches one verb
+  per station with a big thought bubble that shows the real keys: kick, glide,
+  slow down, ollie, light & throw, backflip, grind, flip tricks. Enter skips it;
+  it switches itself off after you finish once (the title has a toggle).
+- **Kick to go, glide, slow down.** Holding → kick-pushes every half second up to
+  cruise speed; letting go glides and never stops (a lazy kick keeps you rolling).
+  Holding ← drags a foot; above 5 m/s it's a powerslide. Shift is a power kick.
+- **Air.** Tap Space to ollie. Hold Space in the air to backflip; let go and the
+  skater spots the landing, righting to the nearest upright. Tap an arrow in the
+  air for a kickflip, heelflip, 360 flip or shove-it — finish it before landing.
+  Come down onto curbs, benches, rails and ledges to grind. Tricks chain into a
+  combo (more variety = bigger multiplier) that banks a second after you land;
+  banked combos fill **FLOW**: eight seconds of speed and a shield that smashes
+  through obstacles. Cones and potholes only trip you; kegs, carts and trucks
+  knock you down.
+- **Light it, throw it.** Hold T: the lighter flicks and the rag catches; a ring
+  shows where it lands and says LOCK when it will go in. It flies about half a
+  second, so release before you reach the can. Throws off a rail or mid-trick
+  score extra. A miss slams the lid on: that house is marked **COME BACK** until
+  the next day (lap).
+- **Let it spread.** Drunk bros party around burning cans and catch fire; burning
+  bros run inside and light the house. Sober bros fight fire with extinguishers.
+  A couch-burning house has a 15% chance of bringing the fire department.
+- **Wreck the Row.** Houses go UNTOUCHED → HARMED → REALLY HARMED → GONE. The
+  n-th house destroyed is worth 2,500 × n.
+- **Shops** unlock bonus destruction: subwoofers, turkey fryers, raccoons and
+  balloon bundles. The apiary's pad opens **Bee Alley**, a short side run behind
+  the back yards: grab beehives (ollie for the ones on fence posts) and don't
+  stand around — on Easy Street a bro notices after 3 s and chases you out. A
+  beehive through a window empties a house, and empty houses rot.
+- **Days.** Each lap is a new day; THE DAILY PIPELINE front page reports what you
+  did yesterday. Routes (Paperboy's difficulty): **Easy Street** (forgiving, ×1
+  points), **Middle Road** (×2), **Hard Way** (×3).
+- **Lives.** Three crew skaters. When one is onboarded, the next frees the zombie
+  and tows them to the ambulance, then plays a **10× bonus round**: ten passes,
+  ten skaters, ten camera angles.
 
-Coffee is a ground-level roll-through pickup; vinyl and clean strip tricks also
-restore ammunition. All five starting looks have identical mechanics. The
-Pipeline overlays tote, quarter-zip, lanyard, blowout and letters. At full meter,
-SORORITY RUSH MODE gives way to a louder comeback, full Riot and a shockwave;
-comebacks never increase damage. A third transformation offers a timed continue.
-A clear with no continues earns 1CC.
+All five starting looks (pretty to punk) play identically.
 
 ## Private local song
 
@@ -48,20 +92,14 @@ bash scripts/import-song.sh
 npm run check:song
 ```
 
-The importer checks yt-dlp >= 2026.08.19 and uses Node when Deno is absent. Upgrade
-with `brew upgrade yt-dlp`, or `pip install -U "yt-dlp[default]"` inside a venv.
-The optional argument is an HTTPS source URL. Existing recordings are backed up.
-
-The authored clock is **183.96 BPM, 0.32616 s/beat, first beat 0.305 s**. It loops
-beats 8–744 during play; the intro starts each run and the ring-out plays on a win.
-`?metronome=1` enables verification clicks. SOUND CHECK measures an eight-tap
-median offset, rejects scattered taps, and is available on first start and pause.
-Music/SFX volume, offset, mute, reduced motion and Beat Assist are persisted.
-Pause and hidden tabs suspend audio; resume includes a four-beat lead-in.
-
-If the file is absent, the title clearly says **SONG FILE MISSING**. Gameplay,
-visual beat and SFX still work, with no synthesized substitute song. Builds warn
-but succeed without the file; `check:song` fails as a separate presence check.
+The authored clock is **183.96 BPM, 0.32616 s/beat, first beat 0.305 s**; the
+subwoofer thumps on it. The run plays the full song once; after that the music
+is a ColecoVision-style chip EDM re-arrangement of the song, derived in the
+browser at runtime from the local file (never stored or committed). Skate school
+loops the song's instrumental intro (everything before the first verse; the range
+is `loops.tutorial` in the beatmap). If the file is absent the title says **SONG
+FILE MISSING**; gameplay and synthesized SFX still work, with no substitute song.
+`?metronome=1` adds a click on every beat.
 
 ## Anonymous admission
 
@@ -71,43 +109,52 @@ runs, not multiplayer synchronization or unique-person identification.
 - POST `/api/queue/join`, `/heartbeat`, `/leave` manage anonymous, memory-only tokens.
 - GET `/api/queue/status` returns only activeCount, waitingCount and capacity,
   with `Cache-Control: max-age=5`. It does not renew leases or mutate the queue.
-- Title/end screens poll status every ten seconds; admitted screens use heartbeats.
-- Heartbeats retry after 2/4/8 seconds. Only HTTP 410 or actual lease expiry pauses.
+- The live player count is shown on every screen.
 - Inactivity releases a slot after two minutes; a 20-minute cap warns a minute early.
-- A place in line is held for ten minutes without heartbeats, so phones can be locked
-  while waiting. Only waiters heard from in the last 90 seconds are seated; silent
-  ones keep their place and are skipped until they return.
+- A place in line is held for ten minutes without heartbeats.
 - The production Worker routes every request through the same singleton Durable Object.
 
 ## Verification
 
 ```sh
-npm test                         # unit/regression tests and 30-seed, five-look smoke gate
-npm run build                    # song warning, Vite, built-copy lint
-node scripts/bot-gauntlet.mjs     # reviewer table: 100 seeds × five looks
-npm run gauntlet                  # 200 training + 200 hold-out seeds × five looks
-node scripts/baseline-gate.mjs    # demonstrates that baseline hold-throw fails the gate
+npm test                          # rules, admission, client and a 6-seed bot gauntlet
+npm run build                     # song warning, Vite build, built-copy lint
+npm run gauntlet                  # 100 hold-out seeds per bot policy with balance gates
+node .claude/skills/game-playtest-loop/scripts/luminance.mjs shot.png   # brightness
 ```
 
-The frozen degenerate policies have a SHA-256 integrity check. Bots use the same
-layout/visibility functions as the renderer and only issue player inputs. The
-full gate checks win/score/pacing targets, fairness, caps, musical impact timing,
-termination and cosmetic parity. `tests/qa.html` provides real-browser 128-pixel
-uniform-layer tests, saturated draw-call audits and a 60-second DOM-input run.
-Use `?hitboxes=1` for projected base ellipses. Browser evidence belongs in
-`docs/iteration-1/`; desktop emulation does not replace physical-device testing.
+Bots (`scripts/bots/policies.mjs`) see only `perceive()` from `src/layout.js` —
+the same projection as the renderer — and act only through player inputs:
+`idle` and `masher` must lose to deliberate play, `brake` must be captured,
+`skilled` must clear the Row. `tests/qa.html` renders a busy scene at three sizes
+and reports brightness and errors; `tests/record.html` with
+`.claude/skills/game-playtest-loop/scripts/record.mjs` records a frame-perfect
+60 fps gameplay video. In development,
+`?scene=fire|wreck|bonus|rescue|shop|win|lap|training&n=0-8|alley|newspaper|trick|grind|flow`
+jumps to a QA scene (`&campus=yale`, `&route=hard` pick the setting) and `?debug=1`
+draws hitboxes; neither exists in production builds. `npm run gauntlet -- --route=hard`
+runs the balance gates on another route.
 
 ## Code map
 
-- `src/sim/`: seeded 60 Hz state machine, player, throwing, enemies, houses, beat and input queue.
-- `src/data/`: tuning, looks, fictional houses, copy and compact authored beatmap.
-- `src/layout.js`: shared pure projection and visible-entity perception.
-- `src/render/`: cached scenery, layer-stack sprites, canvas HUD, effects and measured renderer.
-- `src/main.js`, `controls.js`, `session.js`: fixed-step loop, DOM/gamepad/touch edges and leases.
-- `src/audio.js`: Web Audio clock, song routing, calibration and bounded synthesized SFX.
-- `src/model.js`, `renderer-flat.js`: public entry points; the unused Three.js renderer is removed.
+- `src/sim/`: seeded 60 Hz simulation — street ring and hazards (`row.js`,
+  `street.js`), skating, air and tricks (`player.js`), grinds (`rails.js`), combos
+  and FLOW (`combo.js`), throws and items (`throw.js`), houses, bros and fire
+  (`house.js`), horde, capture and rescue (`crew.js`), the 10× bonus (`bonus.js`),
+  skate school (`training.js`), Bee Alley (`alley.js`), the newspaper (`news.js`)
+  and the phase machine (`game.js`).
+- `src/data/`: tuning and routes, campuses and fictional chapters, houses and
+  shops, looks and bonus skaters, copy (thought bubbles and keycaps), beatmap.
+- `src/layout.js`: shared projection and `perceive()` for bots.
+- `src/render/`: Canvas 2D at device resolution — palette, backdrop (layered
+  ridges, campus landmarks), facades, characters and trick poses, props, effects,
+  HUD (combo, FLOW, skate school, Bee Alley), thought bubbles, the newspaper,
+  bonus cameras and the orchestrating renderer.
+- `src/main.js`, `controls.js`, `session.js`, `audio.js`: loop, input, leases, sound.
 - `server/`, `worker/`: shared admission rules and HTTP handling.
+- `.claude/skills/`: project skills for game feel, art direction, systems design
+  and the playtest loop.
 
-`js/` and `design_handoff_fratty_pipeline/` remain legacy reference material and
-are not loaded by the game. Commit, push, merge and deployment require separate
-user authorization; iteration 1 is intentionally left uncommitted for review.
+`js/`, `design_handoff_fratty_pipeline/` and `docs/GAME_DESIGN_REVIEW.md` are
+legacy references from earlier iterations and are not loaded by the game.
+Commit, push, merge and deployment require separate user authorization.

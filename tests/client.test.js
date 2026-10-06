@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { IDLE_MS, Session } from '../src/session.js';
 import { gamepadState, radial } from '../src/controls.js';
-import { calibrate, GameAudio } from '../src/audio.js';
+import { GameAudio } from '../src/audio.js';
 const admission = {
   token: 'a'.repeat(64),
   status: 'active',
@@ -104,7 +104,7 @@ test('hidden-tab heartbeats release an idle seat instead of renewing it', async 
   assert.equal(p.calls.at(-1).action, 'leave');
   assert.equal(p.calls.filter((call) => call.action === 'heartbeat').length, 1);
 });
-test('gamepad maps all requested buttons and radial dead zone', () => {
+test('gamepad maps ollie, throw, push, item, pause, skip and trick directions; radial dead zone', () => {
   const buttons = Array.from({ length: 16 }, () => ({ pressed: false }));
   buttons[0].pressed = true;
   buttons[7].pressed = true;
@@ -112,26 +112,17 @@ test('gamepad maps all requested buttons and radial dead zone', () => {
   buttons[3].pressed = true;
   buttons[9].pressed = true;
   const state = gamepadState({ axes: [0.1, 0.1], buttons });
-  assert.deepEqual(state, {
-    x: 0,
-    z: 0,
-    ollie: true,
-    throw: true,
-    push: true,
-    super: true,
-    pause: true,
-  });
+  assert.deepEqual(state, { x: 0, z: 0, ollie: true, throw: true, push: true, item: true, pause: true, skip: false, up: false, down: false, left: false, right: false });
+  buttons[8].pressed = true;
+  buttons[12].pressed = true;
+  const flick = gamepadState({ axes: [0.9, 0], buttons });
+  assert.equal(flick.skip, true);
+  assert.equal(flick.up, true, 'd-pad up is a trick tap');
+  assert.equal(flick.right, true, 'a hard stick flick is a trick tap');
   assert.deepEqual(radial(0.1, 0.02, 0.12), { x: 0, z: 0 });
   assert.ok(radial(0.8, 0.8).x < 1);
 });
-test('8-tap calibration measures180ms with jitter and rejects scattered taps', () => {
-  const valid = calibrate([0.16, 0.18, 0.2, 0.17, 0.19, 0.18, 0.175, 0.185]);
-  assert.equal(valid.accepted, true);
-  assert.ok(Math.abs(valid.offset - 0.18) < 0.01);
-  assert.equal(calibrate([-0.2, 0.3, -0.3, 0.2, -0.1, 0.1, -0.4, 0.4]).accepted, false);
-});
-
-test('resume cancels old audio voices and requeues all in-flight smashes on their original beats', async () => {
+test('resume cancels old audio voices, clears stale cues and leads in four beats early', async () => {
   let stops = 0;
   const audio = Object.create(GameAudio.prototype);
   Object.assign(audio, {
@@ -141,14 +132,40 @@ test('resume cancels old audio voices and requeues all in-flight smashes on thei
     voices: [{ source: { stop: () => stops++ } }],
     pending: [{ type: 'stale', beat: 1 }],
   });
-  assert.equal(
-    await audio.resume(40, [{ landBeat: 42 }, { landBeat: 43 }, { landBeat: 44, dead: true }]),
-    36,
-  );
+  assert.equal(await audio.resume(40), 36);
   assert.equal(stops, 1);
-  assert.deepEqual(audio.pending, [
-    { type: 'smash', beat: 42 },
-    { type: 'smash', beat: 43 },
-  ]);
+  assert.deepEqual(audio.pending, []);
   assert.equal(audio.running, true);
+});
+test('the newspaper resumes on the beat it paused (no rewind); leaving stops every music source', async () => {
+  const audio = Object.create(GameAudio.prototype);
+  Object.assign(audio, { unlock: async () => {}, ctx: { currentTime: 20 }, available: false, voices: [], pending: [] });
+  assert.equal(await audio.resume(40, { countIn: false }), 40);
+  assert.ok(Math.abs(audio.beatAt() - 40) < 0.01, 'model.beat would stall while a rewound song caught up');
+  let stopped = 0;
+  const source = { stop: () => stopped++ };
+  Object.assign(audio, { source, chipSource: { ...source }, pending: [{ type: 'stale', beat: 41 }], grinding: { kind: 'bench' } });
+  audio.stop();
+  assert.equal(stopped, 2, 'the song and the chip loop end instead of waiting in the suspended context');
+  assert.equal(audio.running, false);
+  assert.deepEqual(audio.pending, []);
+  assert.equal(audio.grinding, null);
+});
+test('browser shortcuts never reach the game, letting go of ⌘ or Ctrl releases every key, play keys hold back browser defaults', async () => {
+  const { PLAY_KEYS, shortcut, releasesAll } = await import('../src/controls.js');
+  assert.equal(shortcut({ code: 'KeyF', metaKey: true }), true, '⌘F would leave THROW held');
+  assert.equal(shortcut({ code: 'KeyS', ctrlKey: true }), true);
+  assert.equal(shortcut({ code: 'KeyD', altKey: true }), true);
+  assert.equal(shortcut({ code: 'ArrowRight', shiftKey: true }), false, 'Shift is the power kick, not a shortcut');
+  for (const code of ['MetaLeft', 'MetaRight', 'OSLeft', 'ControlLeft', 'ControlRight']) assert.ok(releasesAll(code), code);
+  for (const code of ['ShiftLeft', 'AltLeft', 'KeyT', 'Space']) assert.ok(!releasesAll(code), code);
+  for (const code of ['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) assert.ok(PLAY_KEYS.includes(code), code);
+});
+test('keyboard: T throws (F and J too), Space ollies, Shift kicks, Enter skips; arrows double as trick taps', async () => {
+  const { KEYMAP, DIRECTIONS } = await import('../src/controls.js');
+  for (const key of ['KeyT', 'KeyF', 'KeyJ']) assert.equal(KEYMAP[key], 'throw');
+  assert.equal(KEYMAP.Space, 'ollie');
+  assert.equal(KEYMAP.ShiftLeft, 'push');
+  assert.equal(KEYMAP.Enter, 'skip');
+  assert.deepEqual([DIRECTIONS.ArrowUp, DIRECTIONS.ArrowDown, DIRECTIONS.ArrowLeft, DIRECTIONS.ArrowRight], ['up', 'down', 'left', 'right']);
 });

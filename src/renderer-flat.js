@@ -1,2 +1,2 @@
-// Stable entry point for the Canvas 2D renderer.
-export { WorldRenderer } from './render/world.js';
+// Public renderer entry point (Canvas 2D, device-resolution vector art).
+export { WorldRenderer } from './render/renderer.js';
