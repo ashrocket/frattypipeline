@@ -1,0 +1,16 @@
+Checked Skilled: 100 runs, fairness/termination OK.
+Checked Novice: 100 runs, timeout.
+Checked Pacifist: 100 runs, fairness/termination OK.
+Checked Suicide: 100 runs, fairness/termination OK.
+Checked Mash: 100 runs, fairness/termination OK.
+Seeds 1–100; 1 cosmetic looks.
+| Bot | Runs | Wins | Median s | Houses | Mean score | Hit runs | D3 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Skilled | 100 | 99.0% | 252.8 | 11.99 | 339671 | 100.0% | 100.0% |
+| Novice | 100 | 25.0% | 329.1 | 11.14 | 154870 | 100.0% | 100.0% |
+| Pacifist | 100 | 0.0% | 107.0 | 0.00 | 5311 | 100.0% | 0.0% |
+| Suicide | 100 | 58.0% | 289.3 | 11.35 | 113805 | 100.0% | 96.0% |
+| Mash | 100 | 0.0% | 224.4 | 2.99 | 27386 | 100.0% | 0.0% |
+Skilled: dead air 20.0%; district lock medians 11.4/10.0/12.9 s; bosses 25.1/27.9/47.9 s.
+Novice: dead air 16.8%; district lock medians 14.0/17.4/18.0 s; bosses 36.6/34.4/53.2 s.
+FAIL: Novice: timeout

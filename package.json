@@ -1,0 +1,19 @@
+{
+  "name": "fratty-pipeline",
+  "version": "4.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/check-song.mjs --warn && vite build && node scripts/lint-dist.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "deploy": "npm run build && wrangler deploy",
+    "check:song": "node scripts/check-song.mjs",
+    "gauntlet": "node scripts/gauntlet.mjs --seeds=100 --offset=1001"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2",
+    "wrangler": "^4.147.0"
+  }
+}

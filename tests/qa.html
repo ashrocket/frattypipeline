@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PIPELINE render check</title>
+    <style>
+      body { margin: 0; background: #f3ecff; color: #2a1e4f; font: 14px 'Avenir Next', system-ui, sans-serif; }
+      button { margin: 12px; padding: 12px 18px; font: 800 14px inherit; border: 3px solid #2a1e4f; border-radius: 12px; background: #ffd23f; box-shadow: 4px 4px 0 #2a1e4f; }
+      pre { white-space: pre-wrap; padding: 0 14px; }
+      #render { position: relative; }
+    </style>
+  </head>
+  <body>
+    <button id="render-check">Run render check (3 sizes, stress scene)</button>
+    <pre id="results">Ready.</pre>
+    <div id="render"></div>
+    <script type="module" src="./qa-browser.js"></script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+✔ cancelled join releases late admission (1.779375ms)
+✔ heartbeat retries2/4/8s without pausing;410 and actual expiration pause (0.302667ms)
+✔ lease uses request start, warns once at60 seconds (0.116084ms)
+✔ gamepad maps all requested buttons and radial dead zone (0.517083ms)
+✔ 8-tap calibration measures180ms with jitter and rejects scattered taps (0.13075ms)
+✔ resume cancels old audio voices and requeues all in-flight smashes on their original beats (0.184833ms)
+✔ run starts at x6; 12 arenas, three districts, authored A/C waves and boss bars (3.046208ms)
+✔ neutral does not auto-scroll; exact coasting and bounded depth (2.880083ms)
+✔ hold never repeats throws or pushes; overcharge costs exactly one bottle (1.324042ms)
+✔ throws outside arena are silent and free; far toss visibly falls short (0.936125ms)
+✔ fixed aim lead does not move with beat phase; impact is on the beat during freezes (0.477ms)
+✔ lob and air mail have distinct charge, reach and guard contracts (0.369625ms)
+✔ ollie preserves 8.4/24 arc, landing lag and permits throwing in lag (0.647ms)
+✔ push has startup, protection and recovery; held input cannot repeat (0.34875ms)
+✔ 100ms input buffer and hit-stop retain presses until executable (0.3805ms)
+✔ LOW parry takes precedence at 100ms, 15ms is a hit; MID push startup is vulnerable (0.918292ms)
+✔ invulnerability does not consume hazards; keg wipeout grants no invulnerability (0.211209ms)
+✔ finance pitch keeps sprites apart; pong flees on release without bottle contact (0.271458ms)
+✔ makeover ends on downbeat, comeback adds no damage and third makeover offers continue (0.735209ms)
+✔ timer includes strips; TIME OVER heals only current chunk and resets to20 (0.18925ms)
+✔ coffee requires actual motion on ground and awards ammo once (0.164ms)
+✔ judging uses stamped input edges and groove rejects double presses (0.175917ms)
+✔ super emits six bottles but causes exactly five total damage and no Riot feedback (0.916875ms)
+✔ 30/60/120 render rates and supplied ideal beats give byte-identical event logs for seeds1–20 (4009.922ms)
+✔ calibration changes judging only, never charge class, aim lead or flight duration (0.363666ms)
+✔ a timely release buffered during hitstop cannot fizzle while waiting (0.288583ms)
+✔ media-element fallback widens judging without changing normal windows (0.118583ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4090.167209

@@ -1,0 +1,10 @@
+| Bot | Runs | Wins | Median s | Houses | Mean score | Hit runs | D3 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Skilled | 30 | 100.0% | 243.3 | 12.00 | 349922 | 100.0% | 100.0% |
+| Novice | 30 | 36.7% | 314.8 | 11.07 | 153667 | 100.0% | 100.0% |
+| Pacifist | 30 | 0.0% | 109.6 | 0.00 | 5730 | 100.0% | 0.0% |
+| Suicide | 30 | 56.7% | 284.1 | 11.40 | 111997 | 100.0% | 96.7% |
+| Mash | 30 | 0.0% | 227.0 | 3.00 | 26395 | 100.0% | 0.0% |
+Skilled: dead air 19.9%; district lock medians 11.1/9.7/10.7 s; bosses 25.1/26.6/48.0 s.
+Novice: dead air 17.7%; district lock medians 14.1/14.9/17.0 s; bosses 36.5/34.5/52.0 s.
+PASS

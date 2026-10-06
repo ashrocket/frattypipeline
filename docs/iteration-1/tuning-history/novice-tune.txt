@@ -1,0 +1,7 @@
+Checked Novice: 200 runs, fairness/termination OK.
+Seeds 1–200; 1 cosmetic looks.
+| Bot | Runs | Wins | Median s | Houses | Mean score | Hit runs | D3 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Novice | 200 | 26.0% | 324.2 | 11.12 | 146936 | 100.0% | 100.0% |
+Novice: dead air 17.3%; district lock medians 14.3/16.0/17.6 s; bosses 34.4/34.0/51.6 s.
+PASS
