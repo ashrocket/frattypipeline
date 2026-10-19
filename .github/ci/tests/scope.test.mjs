@@ -21,19 +21,20 @@ test('non-PR events and failed comparisons always run full', () => {
   assert.equal(scope('pull_request', event, () => Buffer.from('docs/a.md')), true);
 });
 test('real git diffs include rename source, delete and multiple areas', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'duva-ci-'));
+  const dir = mkdtempSync(join(tmpdir(), 'pipeline-ci-'));
   const git = args => execFileSync('git', args, {cwd: dir});
   const commit = () => {git(['add', '.']); git(['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'fixture']); return git(['rev-parse', 'HEAD']).toString().trim();};
   try {
-    git(['init', '-q']); mkdirSync(join(dir, 'server')); mkdirSync(join(dir, 'docs'));
-    writeFileSync(join(dir, 'server/a'), 'shared'); writeFileSync(join(dir, 'docs/a.md'), 'docs');
+    git(['init', '-q']); mkdirSync(join(dir, 'src')); mkdirSync(join(dir, 'docs'));
+    writeFileSync(join(dir, 'src/a'), 'shared'); writeFileSync(join(dir, 'docs/a.md'), 'docs');
     const base = commit();
-    renameSync(join(dir, 'server/a'), join(dir, 'docs/renamed'));
+    renameSync(join(dir, 'src/a'), join(dir, 'docs/renamed.md'));
     let head = commit();
     const check = () => scope('pull_request', {pull_request: {base: {sha: base}, head: {sha: head}}}, git);
     assert.equal(check(), true);
-    git(['reset', '--hard', base]); rmSync(join(dir, 'server/a')); head = commit(); assert.equal(check(), true);
+    git(['reset', '--hard', base]); renameSync(join(dir, 'docs/a.md'), join(dir, 'src/from-docs')); head = commit(); assert.equal(check(), true);
+    git(['reset', '--hard', base]); rmSync(join(dir, 'src/a')); head = commit(); assert.equal(check(), true);
     git(['reset', '--hard', base]); rmSync(join(dir, 'docs/a.md')); head = commit(); assert.equal(check(), false);
-    writeFileSync(join(dir, 'server/b'), 'shared'); head = commit(); assert.equal(check(), true);
+    writeFileSync(join(dir, 'src/b'), 'shared'); head = commit(); assert.equal(check(), true);
   } finally {rmSync(dir, {recursive:true, force:true});}
 });
