@@ -92,7 +92,7 @@ Not defined in the source: clear space, minimum size and alternate colourways. D
 
 The title screen (`#title-screen`, index.html:28) has these parts, in order:
 
-1. Top bar: brand text PIPELINE, street label GREEK ROW, player-count pill, sound icon button (index.html:18-22). The pause button carries the hidden attribute (index.html:23).
+1. Top bar: brand text PIPELINE, street label GREEK ROW (a real game label, source-exact: index.html:19, src/data/strings.js:122; styled italic, 3px tracking, uppercase as in styles.css:89-92, kept as the source has it), player-count pill, sound icon button (index.html:18-22). The pause button carries the hidden attribute (index.html:23).
 2. Eyebrow: "THREE SKATERS · ONE ROW · ZERO BIDS ACCEPTED" (src/data/strings.js:24). Uses `eyebrow`, `pink`. The Hero preview omits it.
 3. Wordmark: PIPELINE. Uses `wordmark`, `ink`, `pink` shadow.
 4. Tagline: "Burn the status quo." Uses `tagline`, `ink`.
