@@ -2,6 +2,8 @@ name: Game checks
 
 on:
   pull_request:
+  merge_group:
+  workflow_dispatch:
   push:
     branches: [main, 'codex/**']
 
@@ -13,12 +15,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Test change scoping
+        run: node --test .github/ci/tests/scope.test.mjs
+      - name: Determine game scope
+        id: scope
+        run: node .github/ci/scope.mjs
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.full != 'false'
         with:
           node-version: 24
           cache: npm
       - run: npm ci
+        if: steps.scope.outputs.full != 'false'
       - run: npm test
+        if: steps.scope.outputs.full != 'false'
       - run: npm run build
+        if: steps.scope.outputs.full != 'false'
       - run: bash -n scripts/import-song.sh
+        if: steps.scope.outputs.full != 'false'
       - run: npx wrangler deploy --dry-run
+        if: steps.scope.outputs.full != 'false'
