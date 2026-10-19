@@ -1,0 +1,66 @@
+/* PIPELINE — generated from tokens.json */
+:root, [data-theme="light"] {
+  --ink: #2a1e4f;
+  --ink-soft: #4a3d7a;
+  --paper: #ffffff;
+  --lav: #f3ecff;
+  --pink: #ff3ea5;
+  --cyan: #1fe5ff;
+  --sun: #ffd23f;
+  --mint: #3df2a8;
+  --grape: #7b4dff;
+  --tangerine: #ff8a3d;
+  --sky: #4fc3ff;
+  --sky-pale: #ddf8ff;
+  --sun-light: #ffe27a;
+  --lilac: #d9d2f0;
+  --logo-aqua: #8eebff;
+  --logo-coral: #ff7a3d;
+  --paper-glass: rgba(255, 255, 255, 0.92);
+  --paper-wash: rgba(255, 255, 255, 0.9);
+  --paper-wash-mid: rgba(255, 255, 255, 0.72);
+  --panel-glass: rgba(255, 255, 255, 0.95);
+  --shadow-ink-3: 0 3px 0 #2a1e4f;
+  --shadow-ink-6: 6px 6px 0 #2a1e4f;
+  --shadow-ink-8: 8px 8px 0 #2a1e4f;
+  --shadow-grape-8: 8px 8px 0 #7b4dff;
+  --shadow-pink-3: 0 3px 0 #ff3ea5;
+  --shadow-pink-drop: 6px 7px 0 #ff3ea5;
+}
+:root {
+  --bar-height: 52px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-20: 20px;
+  --space-22: 22px;
+  --space-30: 30px;
+  --space-64: 64px;
+  --measure-copy: 620px;
+  --measure-body: 520px;
+  --width-picker: 420px;
+  --radius-pill: 999px;
+  --radius-round: 50%;
+  --radius-control: 14px;
+  --radius-panel: 20px;
+  --radius-option: 10px;
+  --radius-tag: 8px;
+  --radius-key: 6px;
+  --font-display: 'Avenir Next Condensed', 'Futura', 'Bahnschrift', 'Roboto Condensed', 'Arial Narrow', Impact, sans-serif;
+  --font-ui: 'Avenir Next', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+.wordmark { font-family: var(--font-display); font-size: 148px; line-height: 0.86; font-weight: 900; letter-spacing: -1px; font-style: italic; }
+.tagline { font-family: var(--font-display); font-size: 36px; line-height: 1.1; font-weight: 900; font-style: italic; }
+.brand { font-family: var(--font-display); font-size: 28px; line-height: 1; font-weight: 900; letter-spacing: 0.5px; font-style: italic; }
+.cta { font-family: var(--font-display); font-size: 22px; font-weight: 900; letter-spacing: 1px; font-style: italic; }
+.picker-title { font-family: var(--font-display); font-size: 22px; font-weight: 900; font-style: italic; }
+.option { font-family: var(--font-display); font-size: 14px; font-weight: 800; letter-spacing: 0.5px; font-style: italic; }
+.eyebrow { font-family: var(--font-display); font-size: 13px; font-weight: 800; letter-spacing: 3px; font-style: italic; }
+.street { font-family: var(--font-display); font-size: 12px; font-weight: 800; letter-spacing: 3px; font-style: italic; }
+.body { font-family: var(--font-ui); font-size: 15px; line-height: 1.6; font-weight: 500; }
+.button-secondary { font-family: var(--font-ui); font-size: 14px; font-weight: 800; }
+.label { font-family: var(--font-ui); font-size: 12px; font-weight: 800; letter-spacing: 0.5px; }
+.chip { font-family: var(--font-ui); font-size: 12px; font-weight: 700; }
+.kbd { font-family: var(--font-ui); font-size: 11px; font-weight: 800; }

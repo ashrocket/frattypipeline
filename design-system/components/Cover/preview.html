@@ -1,0 +1,90 @@
+<!-- @dsCard height=320 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PIPELINE cover</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; width: 960px; height: 320px; overflow: hidden; }
+  body { background: var(--paper); }
+  svg { display: block; }
+  .c-ink { fill: var(--ink); }
+  .c-pink { fill: var(--pink); }
+  .c-sun { fill: var(--sun); }
+  .c-grape { fill: var(--grape); }
+  .c-sky { fill: var(--sky); }
+  .c-paper { fill: var(--paper); }
+  .name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 900;
+    font-size: 96px;
+    fill: url(#wm);
+    stroke: var(--ink);
+    stroke-width: 3px;
+    paint-order: stroke fill;
+  }
+  .name-shadow {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 900;
+    font-size: 96px;
+    fill: var(--pink);
+    stroke: var(--pink);
+    stroke-width: 3px;
+  }
+  .tag {
+    font-family: var(--font-ui);
+    font-weight: 500;
+    font-size: 14px;
+    fill: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+<svg width="960" height="320" viewBox="0 0 960 320" role="img" aria-label="PIPELINE">
+  <!--
+    Derivation.
+    Blocks: 5 solid blocks in the identity colours: sky (styles.css:13), pink (styles.css:7), sun (styles.css:9), grape (styles.css:11), ink (styles.css:3). Half the cover is colour.
+    Arrangement: a block grid right of x=480, no two blocks the same size. Sizes 200x168, 280x96, 140x72, 140x224, 340x152. Canvas is 960x320.
+    Pattern: one diagonal band of three 40px stripes in pink, sun and sky, cut across the ink and grape blocks. It uses only brief colours and echoes the loud stripe edge of the look picker.
+    Steps and radii: none. The blocks have square corners; the title screen uses rounded panels and buttons.
+    Name: the Hero wordmark treatment (aqua and coral gradient, ink outline, pink offset shadow), with the real app icon from assets/Logos/icon.svg beside it.
+  -->
+  <defs>
+    <clipPath id="band-clip">
+      <rect x="480" y="168" width="340" height="152"/>
+      <rect x="820" y="96" width="140" height="224"/>
+    </clipPath>
+    <linearGradient id="wm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" style="stop-color: var(--paper)"/>
+      <stop offset="0.44" style="stop-color: var(--logo-aqua)"/>
+      <stop offset="0.5" style="stop-color: var(--ink-soft)"/>
+      <stop offset="0.53" style="stop-color: var(--logo-coral)"/>
+      <stop offset="1" style="stop-color: var(--sun-light)"/>
+    </linearGradient>
+  </defs>
+  <!-- Blocks (right of x=480) -->
+  <rect class="c-sky" x="480" y="0" width="200" height="168"/>
+  <rect class="c-pink" x="680" y="0" width="280" height="96"/>
+  <rect class="c-sun" x="680" y="96" width="140" height="72"/>
+  <rect class="c-grape" x="820" y="96" width="140" height="224"/>
+  <rect class="c-ink" x="480" y="168" width="340" height="152"/>
+  <!-- Diagonal band across the ink and grape blocks -->
+  <g clip-path="url(#band-clip)">
+    <g transform="translate(720 240) rotate(-40)">
+      <rect class="c-pink" x="-500" y="-60" width="1000" height="40"/>
+      <rect class="c-sun" x="-500" y="-20" width="1000" height="40"/>
+      <rect class="c-sky" x="-500" y="20" width="1000" height="40"/>
+    </g>
+  </g>
+  <!-- Real app icon -->
+  <image href="../../assets/Logos/icon.svg" x="36" y="40" width="72" height="72"/>
+  <!-- Name and tagline, bottom-left -->
+  <text class="name-shadow" x="40" y="230">PIPELINE</text>
+  <text class="name" x="36" y="226">PIPELINE</text>
+  <text class="tag" x="40" y="262">Burn the status quo.</text>
+</svg>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!-- @dsCard group="Landing" height=520 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PIPELINE hero</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: linear-gradient(180deg, var(--sky), var(--sky-pale));
+    color: var(--ink);
+    font-family: var(--font-ui);
+    overflow: hidden;
+  }
+  * { box-sizing: border-box; }
+
+  /* Top bar: styles.css:67-82 */
+  .topbar {
+    height: var(--bar-height);
+    padding: 0 var(--space-16);
+    display: flex;
+    align-items: center;
+    gap: var(--space-16);
+    background: var(--paper-glass);
+    border-bottom: 3px solid var(--ink);
+    box-shadow: var(--shadow-pink-3);
+  }
+  .brand {
+    background: linear-gradient(180deg, var(--paper) 0%, var(--logo-aqua) 44%, var(--ink-soft) 50%, var(--logo-coral) 53%, var(--sun-light) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--ink);
+    filter: drop-shadow(var(--shadow-pink-3));
+    text-decoration: none;
+  }
+  .street { color: var(--ink-soft); }
+  .top-actions { margin-left: auto; display: flex; align-items: center; gap: var(--space-8); }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 800 12px var(--font-ui); letter-spacing: 0.5px; color: var(--ink);
+    background: var(--paper); border: 2px solid var(--ink);
+    border-radius: var(--radius-pill); padding: 5px 12px; white-space: nowrap;
+  }
+  .pill::before {
+    content: ''; width: 8px; height: 8px; border-radius: var(--radius-round);
+    background: var(--mint); box-shadow: 0 0 0 2px var(--ink);
+  }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: var(--radius-round);
+    border: 2px solid var(--ink); background: var(--sun); color: var(--ink);
+    font: 900 16px var(--font-ui); box-shadow: var(--shadow-ink-3);
+    display: grid; place-items: center;
+  }
+
+  /* Title screen: styles.css:150-160, 161-199 */
+  .stage {
+    position: relative;
+    height: calc(100vh - var(--bar-height));
+    min-height: 520px;
+  }
+  .title {
+    position: absolute; inset: 0;
+    display: grid;
+    grid-template-columns: minmax(340px, 1.05fr) minmax(300px, 0.8fr);
+    gap: 4vw;
+    align-items: center;
+    padding: 3vh 5vw 64px;
+    background: linear-gradient(90deg, var(--paper-wash), var(--paper-wash-mid) 42%, transparent 70%);
+  }
+  .hero-copy { max-width: var(--measure-copy); }
+  .wordmark {
+    margin: 0;
+    background: linear-gradient(180deg, var(--paper) 0%, var(--logo-aqua) 44%, var(--ink-soft) 50%, var(--logo-coral) 53%, var(--sun-light) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-stroke: 3px var(--ink);
+    transform: rotate(-4deg);
+    transform-origin: left center;
+    filter: drop-shadow(var(--shadow-pink-drop));
+    white-space: nowrap;
+  }
+  .wordmark span { display: inline-block; }
+  .wordmark span + span { margin-left: 0.04em; }
+  .tagline { margin: var(--space-18) 0 8px; color: var(--ink); }
+  .description { max-width: var(--measure-body); color: var(--ink-soft); margin: 0 0 var(--space-20); }
+
+  .cta-row { display: flex; align-items: center; gap: var(--space-14); flex-wrap: wrap; }
+  .primary {
+    font: italic 900 22px var(--font-display); letter-spacing: 1px; color: var(--ink);
+    background: linear-gradient(180deg, var(--sun-light), var(--tangerine));
+    border: 3px solid var(--ink); border-radius: var(--radius-control);
+    padding: 14px var(--space-30); box-shadow: var(--shadow-ink-6);
+  }
+  .secondary {
+    font: 800 14px var(--font-ui); color: var(--ink); background: var(--paper);
+    border: 2px solid var(--ink); border-radius: var(--radius-pill);
+    padding: 10px 18px; box-shadow: var(--shadow-ink-3);
+  }
+
+  .key-chips {
+    list-style: none; padding: 0; margin: var(--space-20) 0 0;
+    display: flex; flex-wrap: wrap; gap: 8px 14px;
+    font: 700 12px var(--font-ui); color: var(--ink-soft);
+  }
+  .key-chips li { display: flex; align-items: center; gap: 6px; }
+  .kbd {
+    background: var(--paper); border: 2px solid var(--ink); border-radius: var(--radius-key);
+    padding: 1px 6px; box-shadow: var(--shadow-ink-3); color: var(--ink);
+  }
+  .title-meta { display: flex; align-items: center; gap: var(--space-10); margin: 18px 0 0; }
+
+  /* Look picker: styles.css:280-300 */
+  .look-picker {
+    justify-self: end;
+    width: min(100%, var(--width-picker));
+    background: var(--panel-glass);
+    border: 3px solid var(--ink);
+    border-radius: var(--radius-panel);
+    padding: var(--space-18) var(--space-20) 16px;
+    box-shadow: var(--shadow-grape-8);
+    position: relative;
+  }
+  .look-picker::before {
+    content: ''; position: absolute; inset: -3px -3px auto; height: 12px;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    background: repeating-linear-gradient(90deg, var(--pink) 0 18px, var(--sun) 18px 36px, var(--cyan) 36px 54px, var(--mint) 54px 72px);
+    border-bottom: 3px solid var(--ink);
+  }
+  .picker-title { margin: var(--space-10) 0 12px; }
+  .look-options { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+  .option {
+    color: var(--ink); background: var(--paper); border: 2px solid var(--ink);
+    border-radius: var(--radius-option); padding: 8px 12px; box-shadow: var(--shadow-ink-3);
+  }
+  .option[aria-pressed='true'] { background: var(--sun); }
+  .look-help { font: 500 12px/1.5 var(--font-ui); color: var(--ink-soft); margin: 12px 0 0; }
+  .toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; font: 700 12px var(--font-ui); color: var(--ink); }
+  .toggle i {
+    width: 16px; height: 16px; border: 2px solid var(--ink); border-radius: 4px;
+    background: var(--paper); display: inline-block;
+  }
+
+  @media (max-width: 960px) {
+    body { overflow-x: hidden; overflow-y: auto; }
+    .stage { height: auto; min-height: 0; }
+    .title { position: relative; inset: auto; grid-template-columns: minmax(0, 1fr); gap: var(--space-16); align-content: start; padding: 24px 16px 16px; }
+    .hero-copy, .look-picker { min-width: 0; }
+    .look-picker { justify-self: stretch; width: 100%; }
+    .wordmark { font-size: clamp(56px, 17vw, 148px); }
+    .street { display: none; }
+  }
+  @media (max-width: 720px) {
+    html, body { height: auto; min-height: 100%; }
+    body { background: linear-gradient(180deg, var(--sky), var(--sky-pale)) fixed; min-height: 100vh; }
+    .topbar { flex-wrap: wrap; height: auto; min-height: var(--bar-height); padding: 6px var(--space-16); gap: var(--space-8); }
+    .top-actions { gap: var(--space-8); }
+    .pill { padding: 3px 8px; }
+    .stage { min-height: auto; }
+    .title { grid-template-columns: minmax(0, 1fr); }
+    .hero-copy, .look-picker, .description { min-width: 0; max-width: 100%; }
+    .key-chips { max-width: 100%; }
+    .key-chips li { flex-wrap: wrap; min-width: 0; }
+    .look-options { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">PIPELINE</span>
+    <span class="street">GREEK ROW</span>
+    <div class="top-actions">
+      <span class="pill">0 / 20 PLAYING</span>
+      <button class="icon-btn" aria-label="PIPELINE sound" type="button">&#9835;</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="title">
+      <div class="hero-copy">
+        <h1 class="wordmark" aria-label="PIPELINE"><span>PIPE</span><span>LINE</span></h1>
+        <p class="tagline">Burn the status quo.</p>
+        <p class="description">Skate Greek Row. Sink flaming bottles into frat trash cans and let the chaos spread house to house. Never stop rolling: the Pipeline turns stragglers into quarter-zip zombies.</p>
+        <div class="cta-row">
+          <button class="primary" type="button">DROP IN</button>
+          <button class="secondary" type="button">HOW TO PLAY</button>
+        </div>
+        <ul class="key-chips" aria-label="Keyboard controls">
+          <li><kbd class="kbd">→</kbd> kick</li>
+          <li><kbd class="kbd">←</kbd> slow down</li>
+          <li><kbd class="kbd">↑↓</kbd> carve</li>
+          <li><kbd class="kbd">T</kbd> hold to light, release to throw</li>
+          <li><kbd class="kbd">Space</kbd> ollie · hold in the air: backflip</li>
+          <li><kbd class="kbd">Enter</kbd> skip</li>
+        </ul>
+        <p class="title-meta"><span class="pill">0 / 20 PLAYING</span></p>
+      </div>
+
+      <section class="look-picker" aria-label="PIPELINE starting look">
+        <p class="picker-title">PICK YOUR LOOK</p>
+        <div class="look-options">
+          <span class="option" aria-pressed="false">PRETTY</span>
+          <span class="option" aria-pressed="false">GLAM</span>
+          <span class="option" aria-pressed="false">INDIE</span>
+          <span class="option" aria-pressed="false">PUNK-ISH</span>
+          <span class="option" aria-pressed="true">FULL PUNK</span>
+        </div>
+        <p class="look-help">Pretty to punk. Every look skates the same.</p>
+        <label class="toggle"><i></i><span>TRAINING COURSE FIRST</span></label>
+      </section>
+
+    </section>
+  </main>
+</body>
+</html>

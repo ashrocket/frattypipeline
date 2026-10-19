@@ -1,0 +1,45 @@
+{
+  "project": "frattypipeline",
+  "what": "PIPELINE, a browser arcade skateboard game set on a fictional Greek Row. It runs on Vite, plain ESM and Canvas 2D, with a Cloudflare Worker for a live player queue.",
+  "audience": "Players of a free single-player browser game. The game is satire, and it names real campuses as settings only.",
+  "landing_job": "The title screen starts a run. It shows the PIPELINE wordmark, a starting-look picker, campus and route choices, a skip-training toggle and the live player count.",
+  "surfaces": [
+    {"kind": "web-app", "where": "index.html:16 (#app root), styles.css, package.json:2 (fratty-pipeline)"},
+    {"kind": "landing", "where": "index.html:28 (#title-screen)"}
+  ],
+  "public_url": "",
+  "brand_family": "",
+  "logo_files": ["public/icon.svg"],
+  "existing_ds": {
+    "paths": ["docs/DESIGN.md", "docs/GAME_DESIGN_REVIEW.md", "design_handoff_fratty_pipeline/README.md"],
+    "has_readme_brandbook": false,
+    "has_tokens": false,
+    "has_cover_or_specimen": false,
+    "has_hero_pattern": false,
+    "has_logo_rules": false,
+    "published_artifact": ""
+  },
+  "identity": {
+    "coherent": true,
+    "palette": [
+      {"role": "Text, logo outline, offset shadows", "value": "#2a1e4f", "cite": "styles.css:3"},
+      {"role": "Paper and card surface", "value": "#ffffff", "cite": "styles.css:5"},
+      {"role": "Accent: eyebrow, logo drop shadow, brand bar shadow", "value": "#ff3ea5", "cite": "styles.css:7"},
+      {"role": "Sky: page gradient top and theme colour", "value": "#4fc3ff", "cite": "styles.css:13"},
+      {"role": "Sun: highlight and logo gradient end", "value": "#ffd23f", "cite": "styles.css:9"},
+      {"role": "Grape: secondary accent", "value": "#7b4dff", "cite": "styles.css:11"},
+      {"role": "Tangerine: logo gradient stop", "value": "#ff8a3d", "cite": "styles.css:12"},
+      {"role": "Ink soft: logo gradient midpoint", "value": "#4a3d7a", "cite": "styles.css:4"}
+    ],
+    "type": [
+      {"role": "Display: eyebrow, logo, tagline, brand (italic 800 to 900)", "family": "'Avenir Next Condensed', 'Futura', 'Bahnschrift', 'Roboto Condensed', 'Arial Narrow', Impact, sans-serif (system stack, no font file)", "cite": "styles.css:15"},
+      {"role": "UI text", "family": "'Avenir Next', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif (system stack)", "cite": "styles.css:16"},
+      {"role": "Wordmark size and rotation", "family": "Display stack, italic 900, clamp(64px, 9.5vw, 148px), line-height 0.86", "cite": "styles.css:172"}
+    ],
+    "look": "A bright daylight pop palette: a sky-blue page gradient, a white card, condensed italic display type and a pink offset shadow on the rotated PIPELINE wordmark."
+  },
+  "design_system_dir_conflict": "",
+  "classification": "formalize_from_code",
+  "v2_case": "",
+  "notes": "No design-system folder, tokens or brand book exist. The live identity (PIPELINE, styles.css) differs from the older handoff (FRATTY PIPELINE, black and paper, Archivo Black and VT323 at design_handoff_fratty_pipeline/design/styles.css:2,5-15; design/index.html:6). A system must pick one. The only logo file is an app icon. The wordmark is plain type (styles.css:170-186). public/audio/fratty-pipeline.mp3 is a private, unpublished recording and was not read. Read-only profile; the project was not changed."
+}

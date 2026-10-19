@@ -1,0 +1,13 @@
+{
+ "n": "frattypipeline",
+ "target": "design-system",
+ "mode": "formalize",
+ "brief": "Formalize PIPELINE (Avenir Next Condensed italic 800-900 display, Avenir Next UI, ink #2a1e4f, pink #ff3ea5 offset shadow, sky #4fc3ff, sun #ffd23f, grape #7b4dff). Copy the real logo file. Hero = the title screen.",
+ "ruling": "Hero at 390px: nothing clipped, no horizontal overflow (wrap the top-bar pill, max-width:100%, min-width:0). Hero at 1280x520: the wordmark must not rise into the top bar (account for the 52px bar in .stage height). \"GREEK ROW\" is a real game label: keep it if source-exact (ruling 2) and cite it; list it in README \"Landing page anatomy\".",
+ "defects": [
+  "components/Hero/preview.html (layout at 390px width, screenshot /Users/ashrocket/ashcode/design-systems/shots/hero-390x844.png and hero-375.png): content runs past the right edge. The top-bar '0 / 20 PLAYING' pill is cut to '0 / 20 PLA', the description and key-chip lines are clipped, and the look-picker panel loses its right edge and the FULL PUNK option. The body sets overflow-x: hidden (line ~148), so the clipping hides content instead of wrapping it. The preview contract requires width-fluid layout with no horizontal scroll.",
+  "components/Hero/preview.html at its declared card height of 520 (screenshot /Users/ashrocket/ashcode/design-systems/shots/hero-1280x520.png): the wordmark rises into the top bar, because .stage has min-height 520px on top of the 52px bar, and the bottom '0 / 20 PLAYING' title-meta pill is cut off at the card edge. Overflow is hidden on desktop too (body overflow: hidden, line ~13).",
+  "components/Hero/preview.html:174 uses class 'street' for the uppercase label 'GREEK ROW'. tokens.css:61 gives .street letter-spacing: 3px, so the rendered label is a tracked ALL-CAPS label, which SPEC forbids in previews. README.md 'Landing page anatomy' omits the eyebrow for this same tell, so the omission is inconsistent with keeping the street label.",
+  "SOURCES.md:3, SOURCES.md:27 and SOURCES.md:28 contain absolute local paths that include the owner's macOS account name (/Users/ashrocket/ashcode/...). This is a personal identifier in a file that ships with the system. Low severity. Use project-relative paths (for example ../design-systems/profiles/frattypipeline.json) or no user-specific prefix."
+ ]
+}
